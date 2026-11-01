@@ -11,6 +11,7 @@ import {
   orderBy,
   limit,
   serverTimestamp,
+  runTransaction,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import {
@@ -21,10 +22,13 @@ import {
   StudioExpense,
   ActivityLog,
   DashboardMetrics,
+  PackageSnapshot,
 } from "./types";
 import { getTodayNepal } from "./utils";
 
-// Helper: Log Studio Activity
+// ----------------------------------------------------------------------
+// ACTIVITY AUDIT LOGGING
+// ----------------------------------------------------------------------
 export async function logActivity(
   userId: string,
   userName: string,
@@ -51,7 +55,7 @@ export async function logActivity(
 }
 
 // ----------------------------------------------------------------------
-// CLIENTS
+// CLIENT MANAGEMENT
 // ----------------------------------------------------------------------
 export async function getClients(): Promise<Client[]> {
   const q = query(collection(db, "clients"), orderBy("createdAt", "desc"));
@@ -72,14 +76,33 @@ export async function getClientById(id: string): Promise<Client | null> {
   return { id: snap.id, ...(snap.data() as Omit<Client, "id">) };
 }
 
+export async function getClientBookings(clientId: string): Promise<Booking[]> {
+  const q = query(
+    collection(db, "bookings"),
+    where("clientId", "==", clientId),
+    orderBy("appointmentDate", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }));
+}
+
 export async function createClient(
   clientData: Omit<Client, "id" | "createdAt" | "updatedAt">,
   user: { uid: string; displayName: string }
 ): Promise<Client> {
+  // Check for duplicate phone number to prevent duplicate client profiles
+  const existingQ = query(collection(db, "clients"), where("phone", "==", clientData.phone.trim()));
+  const existingSnap = await getDocs(existingQ);
+  if (!existingSnap.empty) {
+    const existing = existingSnap.docs[0];
+    throw new Error(`A client with phone number ${clientData.phone} is already registered (${existing.data().fullName}).`);
+  }
+
   const col = collection(db, "clients");
   const now = new Date().toISOString();
   const docRef = await addDoc(col, {
     ...clientData,
+    phone: clientData.phone.trim(),
     totalBookings: 0,
     totalSpent: 0,
     createdAt: now,
@@ -92,7 +115,7 @@ export async function createClient(
     "CREATED_CLIENT",
     "client",
     docRef.id,
-    `Added client ${clientData.fullName} (${clientData.phone})`
+    `Registered client ${clientData.fullName} (Phone: ${clientData.phone})`
   );
 
   return { id: docRef.id, ...clientData, totalBookings: 0, totalSpent: 0, createdAt: now, updatedAt: now };
@@ -121,9 +144,9 @@ export async function updateClient(
 }
 
 // ----------------------------------------------------------------------
-// PACKAGES
+// PACKAGE MANAGEMENT
 // ----------------------------------------------------------------------
-export async function getPackages(includeInactive = false): Promise<PhotographyPackage[]> {
+export async function getPackages(includeInactive = true): Promise<PhotographyPackage[]> {
   let q;
   if (includeInactive) {
     q = query(collection(db, "packages"), orderBy("price", "asc"));
@@ -156,17 +179,154 @@ export async function createPackage(
     "CREATED_PACKAGE",
     "package",
     docRef.id,
-    `Created package ${pkgData.name} - NPR ${pkgData.price}`
+    `Created photography package: ${pkgData.name} (NPR ${pkgData.price})`
   );
 
   return { id: docRef.id, ...pkgData, createdAt: now, updatedAt: now };
 }
 
+export async function updatePackage(
+  id: string,
+  pkgData: Partial<PhotographyPackage>,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  const ref = doc(db, "packages", id);
+  const now = new Date().toISOString();
+  await updateDoc(ref, {
+    ...pkgData,
+    updatedAt: now,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "UPDATED_PACKAGE",
+    "package",
+    id,
+    `Updated package ${pkgData.name || id}`
+  );
+}
+
+// Packages are never permanently deleted if used; they are marked inactive
+export async function togglePackageActive(
+  id: string,
+  active: boolean,
+  packageName: string,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  const ref = doc(db, "packages", id);
+  const now = new Date().toISOString();
+  await updateDoc(ref, {
+    active,
+    updatedAt: now,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    active ? "ACTIVATED_PACKAGE" : "DEACTIVATED_PACKAGE",
+    "package",
+    id,
+    `${active ? "Activated" : "Deactivated"} package ${packageName}`
+  );
+}
+
+// Seed the 3 standard studio pricing tiers if database has 0 packages
+export async function seedStandardPackages(user: { uid: string; displayName: string }): Promise<void> {
+  const existing = await getPackages(true);
+  if (existing.length > 0) return;
+
+  const standardPackages: Omit<PhotographyPackage, "id" | "createdAt" | "updatedAt">[] = [
+    {
+      name: "Newborn Starter Collection",
+      category: "Newborn Photography",
+      price: 7999,
+      depositAmount: 3000,
+      durationMinutes: 90,
+      editedPhotosCount: 15,
+      outfitChanges: 2,
+      propsIncluded: true,
+      familyPortraitsIncluded: false,
+      inclusions: [
+        "15 Fully Retouched High-Resolution Photographs",
+        "2 Styled Baby Setups & Props Included",
+        "Baby Solo Focus Session",
+        "Digital Download Gallery",
+      ],
+      description: "Essential newborn photography session focusing purely on delicate baby wraps and sleepy poses.",
+      active: true,
+    },
+    {
+      name: "Newborn Signature Collection",
+      category: "Newborn Photography",
+      price: 15999,
+      depositAmount: 5000,
+      durationMinutes: 150,
+      editedPhotosCount: 30,
+      outfitChanges: 3,
+      propsIncluded: true,
+      familyPortraitsIncluded: true,
+      inclusions: [
+        "30 Fully Retouched High-Resolution Photographs",
+        "3 Styled Thematic Setups & Premium Outfits",
+        "Parent & Sibling Portraits Included",
+        "Private High-Speed Download Gallery",
+        "Custom USB Drive with All Edited Files",
+      ],
+      description: "Our most popular studio experience including timeless parent-baby bonding portraits and artistic themes.",
+      active: true,
+    },
+    {
+      name: "Newborn Luxury Royal Suite",
+      category: "Newborn Photography",
+      price: 31999,
+      depositAmount: 10000,
+      durationMinutes: 240,
+      editedPhotosCount: 50,
+      outfitChanges: 5,
+      propsIncluded: true,
+      familyPortraitsIncluded: true,
+      inclusions: [
+        "50 Fully Retouched Masterpiece Portraits",
+        "Unlimited Thematic Setups & Custom Backdrops",
+        "Grandparents & Extended Family Included",
+        "Premium Flush-Mount Layflat Photo Album (10x10)",
+        "Framed Large Canvas Portrait (16x24)",
+        "Priority 7-Day Express Delivery",
+      ],
+      description: "The complete luxury heirloom package featuring heirloom albums, wall art, and unhurried studio comfort.",
+      active: true,
+    },
+  ];
+
+  for (const pkg of standardPackages) {
+    await createPackage(pkg, user);
+  }
+}
+
 // ----------------------------------------------------------------------
-// BOOKINGS & SESSIONS
+// BOOKING MANAGEMENT & CONFLICT DETECTION
 // ----------------------------------------------------------------------
 export async function getBookings(): Promise<Booking[]> {
   const q = query(collection(db, "bookings"), orderBy("appointmentDate", "desc"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }));
+}
+
+export async function getBookingById(id: string): Promise<Booking | null> {
+  const ref = doc(db, "bookings", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...(snap.data() as Omit<Booking, "id">) };
+}
+
+export async function getBookingsByDateRange(startDate: string, endDate: string): Promise<Booking[]> {
+  const q = query(
+    collection(db, "bookings"),
+    where("appointmentDate", ">=", startDate),
+    where("appointmentDate", "<=", endDate),
+    orderBy("appointmentDate", "asc")
+  );
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }));
 }
@@ -184,7 +344,7 @@ export async function getTodaySessions(): Promise<Booking[]> {
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 }
 
-export async function getUpcomingBookings(maxItems = 6): Promise<Booking[]> {
+export async function getUpcomingBookings(maxItems = 8): Promise<Booking[]> {
   const todayStr = getTodayNepal();
   const q = query(
     collection(db, "bookings"),
@@ -197,6 +357,27 @@ export async function getUpcomingBookings(maxItems = 6): Promise<Booking[]> {
   return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }));
 }
 
+// Conflict Detection: Overlap condition: (StartA < EndB) && (EndA > StartB)
+export async function detectBookingConflicts(
+  appointmentDate: string,
+  startTime: string,
+  endTime: string,
+  excludeBookingId?: string
+): Promise<Booking[]> {
+  const q = query(
+    collection(db, "bookings"),
+    where("appointmentDate", "==", appointmentDate),
+    where("status", "!=", "cancelled")
+  );
+  const snapshot = await getDocs(q);
+  const existing = snapshot.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
+    .filter((b) => b.id !== excludeBookingId);
+
+  return existing.filter((b) => startTime < b.endTime && endTime > b.startTime);
+}
+
+// Format: NPN-YYYY-0001 (Sequential non-reusing booking identifier)
 export async function generateBookingNumber(): Promise<string> {
   const year = new Date().getFullYear();
   const q = query(collection(db, "bookings"), orderBy("createdAt", "desc"), limit(1));
@@ -212,7 +393,7 @@ export async function generateBookingNumber(): Promise<string> {
       }
     }
   }
-  return `NPN-${year}-${String(nextSeq).padStart(3, "0")}`;
+  return `NPN-${year}-${String(nextSeq).padStart(4, "0")}`;
 }
 
 export async function createBooking(
@@ -222,26 +403,40 @@ export async function createBooking(
     clientPhone: string;
     clientEmail?: string;
     babyName?: string;
-    packageId: string;
+    babyDob?: string;
+    category: string;
+    packageId?: string;
     packageName: string;
     packagePriceSnapshot: number;
+    packageSnapshot?: PackageSnapshot;
+    customAgreedPrice?: number;
     discountAmount: number;
     discountReason?: string;
     appointmentDate: string;
     startTime: string;
     endTime: string;
+    durationMinutes: number;
+    status: Booking["status"];
     location?: 'studio' | 'home' | 'outdoor';
     photographerName?: string;
+    specialInstructions?: string;
     notes?: string;
-    advancePaidInitial?: number;
-    paymentMethodInitial?: Payment["paymentMethod"];
+    hasConflictOverride?: boolean;
+    conflictOverrideReason?: string;
   },
   user: { uid: string; displayName: string }
 ): Promise<Booking> {
+  // Validate conflict unless explicitly overridden by authorized admin
+  const conflicts = await detectBookingConflicts(data.appointmentDate, data.startTime, data.endTime);
+  if (conflicts.length > 0 && !data.hasConflictOverride) {
+    throw new Error(
+      `Appointment slot conflict: Overlaps with existing session for ${conflicts[0].clientName} (${conflicts[0].startTime} - ${conflicts[0].endTime}).`
+    );
+  }
+
   const bookingNumber = await generateBookingNumber();
-  const totalAmount = Math.max(0, data.packagePriceSnapshot - (data.discountAmount || 0));
-  const advancePaid = data.advancePaidInitial || 0;
-  const remainingBalance = Math.max(0, totalAmount - advancePaid);
+  const agreedPrice = data.customAgreedPrice !== undefined ? data.customAgreedPrice : data.packagePriceSnapshot;
+  const totalAmount = Math.max(0, agreedPrice - (data.discountAmount || 0));
   const now = new Date().toISOString();
 
   const newBooking: Omit<Booking, "id"> = {
@@ -251,45 +446,41 @@ export async function createBooking(
     clientPhone: data.clientPhone,
     clientEmail: data.clientEmail || "",
     babyName: data.babyName || "",
-    packageId: data.packageId,
+    babyDob: data.babyDob || "",
+    category: data.category,
+    packageId: data.packageId || "",
     packageName: data.packageName,
     packagePriceSnapshot: data.packagePriceSnapshot,
+    packageSnapshot: data.packageSnapshot || {
+      name: data.packageName,
+      price: data.packagePriceSnapshot,
+      durationMinutes: data.durationMinutes,
+      inclusions: [],
+    },
+    customAgreedPrice: data.customAgreedPrice,
     discountAmount: data.discountAmount || 0,
     discountReason: data.discountReason || "",
     totalAmount,
-    advancePaid,
-    remainingBalance,
+    advancePaid: 0,
+    remainingBalance: totalAmount,
     appointmentDate: data.appointmentDate,
     startTime: data.startTime,
     endTime: data.endTime,
-    status: advancePaid > 0 ? "confirmed" : "pending",
+    durationMinutes: data.durationMinutes,
+    status: data.status || "pending",
     location: data.location || "studio",
     photographerName: data.photographerName || "",
+    specialInstructions: data.specialInstructions || "",
     notes: data.notes || "",
+    hasConflictOverride: Boolean(data.hasConflictOverride),
+    conflictOverrideReason: data.conflictOverrideReason || "",
     createdAt: now,
     updatedAt: now,
   };
 
   const docRef = await addDoc(collection(db, "bookings"), newBooking);
 
-  if (advancePaid > 0 && data.paymentMethodInitial) {
-    await recordPayment(
-      {
-        bookingId: docRef.id,
-        bookingNumber,
-        clientId: data.clientId,
-        clientName: data.clientName,
-        amount: advancePaid,
-        paymentType: "advance",
-        paymentMethod: data.paymentMethodInitial,
-        paymentDate: data.appointmentDate,
-        notes: `Initial advance payment upon booking ${bookingNumber}`,
-      },
-      user,
-      false
-    );
-  }
-
+  // Update client total bookings
   try {
     const clientRef = doc(db, "clients", data.clientId);
     const clientSnap = await getDoc(clientRef);
@@ -311,14 +502,108 @@ export async function createBooking(
     "CREATED_BOOKING",
     "booking",
     docRef.id,
-    `Created booking ${bookingNumber} for ${data.clientName} (${data.appointmentDate})`
+    `Created booking ${bookingNumber} for ${data.clientName} on ${data.appointmentDate} (${data.startTime}-${data.endTime})`
   );
 
   return { id: docRef.id, ...newBooking };
 }
 
+export async function updateBooking(
+  id: string,
+  data: Partial<Booking>,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  const ref = doc(db, "bookings", id);
+  const now = new Date().toISOString();
+  await updateDoc(ref, {
+    ...data,
+    updatedAt: now,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "EDITED_BOOKING",
+    "booking",
+    id,
+    `Edited booking details (${data.status ? `Status: ${data.status}` : ""})`
+  );
+}
+
+export async function rescheduleBooking(
+  id: string,
+  newDate: string,
+  newStartTime: string,
+  newEndTime: string,
+  reason: string,
+  hasConflictOverride: boolean,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  const conflicts = await detectBookingConflicts(newDate, newStartTime, newEndTime, id);
+  if (conflicts.length > 0 && !hasConflictOverride) {
+    throw new Error(
+      `Reschedule slot conflict: Overlaps with ${conflicts[0].clientName} (${conflicts[0].startTime} - ${conflicts[0].endTime}).`
+    );
+  }
+
+  const ref = doc(db, "bookings", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Booking not found");
+  const current = snap.data() as Booking;
+
+  const now = new Date().toISOString();
+  await updateDoc(ref, {
+    rescheduledFromDate: current.appointmentDate,
+    rescheduledFromTime: current.startTime,
+    rescheduleReason: reason,
+    appointmentDate: newDate,
+    startTime: newStartTime,
+    endTime: newEndTime,
+    status: "rescheduled",
+    hasConflictOverride,
+    updatedAt: now,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "RESCHEDULED_BOOKING",
+    "booking",
+    id,
+    `Rescheduled booking ${current.bookingNumber} from ${current.appointmentDate} to ${newDate} (${newStartTime}-${newEndTime}). Reason: ${reason}`
+  );
+}
+
+export async function cancelBooking(
+  id: string,
+  reason: string,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  const ref = doc(db, "bookings", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Booking not found");
+  const current = snap.data() as Booking;
+
+  const now = new Date().toISOString();
+  await updateDoc(ref, {
+    status: "cancelled",
+    cancelledAt: now,
+    cancellationReason: reason,
+    updatedAt: now,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "CANCELLED_BOOKING",
+    "booking",
+    id,
+    `Cancelled booking ${current.bookingNumber} for ${current.clientName}. Reason: ${reason}`
+  );
+}
+
 // ----------------------------------------------------------------------
-// PAYMENTS
+// PAYMENTS & EXPENSES (Reconciliation & preparation for Phase 3)
 // ----------------------------------------------------------------------
 export async function getPayments(bookingId?: string): Promise<Payment[]> {
   let q;
@@ -341,75 +626,6 @@ export async function getRecentPayments(maxItems = 5): Promise<Payment[]> {
   return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) }));
 }
 
-export async function generateReceiptNumber(): Promise<string> {
-  const year = new Date().getFullYear();
-  const q = query(collection(db, "payments"), orderBy("createdAt", "desc"), limit(1));
-  const snap = await getDocs(q);
-  let nextSeq = 1;
-  if (!snap.empty) {
-    const last = snap.docs[0].data() as Payment;
-    if (last.receiptNumber && last.receiptNumber.startsWith(`REC-${year}`)) {
-      const parts = last.receiptNumber.split("-");
-      const num = parseInt(parts[parts.length - 1], 10);
-      if (!isNaN(num)) {
-        nextSeq = num + 1;
-      }
-    }
-  }
-  return `REC-${year}-${String(nextSeq).padStart(4, "0")}`;
-}
-
-export async function recordPayment(
-  data: Omit<Payment, "id" | "receiptNumber" | "recordedByUid" | "recordedByName" | "createdAt">,
-  user: { uid: string; displayName: string },
-  updateBookingBalance = true
-): Promise<Payment> {
-  const receiptNumber = await generateReceiptNumber();
-  const now = new Date().toISOString();
-
-  const newPayment: Omit<Payment, "id"> = {
-    ...data,
-    receiptNumber,
-    recordedByUid: user.uid,
-    recordedByName: user.displayName,
-    createdAt: now,
-  };
-
-  const docRef = await addDoc(collection(db, "payments"), newPayment);
-
-  if (updateBookingBalance && data.bookingId) {
-    const bookingRef = doc(db, "bookings", data.bookingId);
-    const bookingSnap = await getDoc(bookingRef);
-    if (bookingSnap.exists()) {
-      const bData = bookingSnap.data() as Booking;
-      const currentAdvance = (bData.advancePaid || 0) + data.amount;
-      const currentRemaining = Math.max(0, bData.totalAmount - currentAdvance);
-      const newStatus = currentRemaining === 0 ? "completed" : bData.status === "pending" ? "confirmed" : bData.status;
-
-      await updateDoc(bookingRef, {
-        advancePaid: currentAdvance,
-        remainingBalance: currentRemaining,
-        status: newStatus,
-        updatedAt: now,
-      });
-    }
-  }
-
-  await logActivity(
-    user.uid,
-    user.displayName,
-    "RECORDED_PAYMENT",
-    "payment",
-    docRef.id,
-    `Recorded payment ${receiptNumber} of NPR ${data.amount} for booking ${data.bookingNumber}`
-  );
-
-  return { id: docRef.id, ...newPayment };
-}
-
-// ----------------------------------------------------------------------
-// EXPENSES
-// ----------------------------------------------------------------------
 export async function getExpenses(): Promise<StudioExpense[]> {
   const q = query(collection(db, "expenses"), orderBy("expenseDate", "desc"));
   const snapshot = await getDocs(q);
@@ -420,7 +636,7 @@ export async function getExpenses(): Promise<StudioExpense[]> {
 // DASHBOARD METRICS & REVENUE TREND
 // ----------------------------------------------------------------------
 export interface MonthlyTrendData {
-  month: string; // e.g. "Jun", "Jul", "Aug"
+  month: string;
   salesBooked: number;
   cashReceived: number;
   expenses: number;
@@ -481,7 +697,6 @@ export async function getMonthlyRevenueTrend(): Promise<MonthlyTrendData[]> {
   const now = new Date();
   const months: { label: string; key: string }[] = [];
 
-  // Generate last 6 months
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -519,17 +734,4 @@ export async function getMonthlyRevenueTrend(): Promise<MonthlyTrendData[]> {
       expenses,
     };
   });
-}
-
-// ----------------------------------------------------------------------
-// ACTIVITY LOGS
-// ----------------------------------------------------------------------
-export async function getRecentActivityLogs(maxItems = 15): Promise<ActivityLog[]> {
-  const q = query(
-    collection(db, "activity_logs"),
-    orderBy("timestamp", "desc"),
-    limit(maxItems)
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ActivityLog, "id">) }));
 }

@@ -1,3 +1,2 @@
-// Phase 2: Client Management Components (Directory, Parent/Baby Profiles, History)
-export {};
-
+export * from "./client-modal";
+export * from "./client-detail-modal";

@@ -1,4 +1,4 @@
-// TypeScript definitions for Newborn Photography Nepal - Studio Manager
+// TypeScript definitions for Newborn Photography Nepal - Studio Manager (By Navin)
 
 export type UserRole = 'admin' | 'staff' | 'photographer';
 
@@ -15,6 +15,14 @@ export interface StudioUser {
 
 export type BabyGender = 'boy' | 'girl' | 'twins' | 'expecting' | 'undisclosed';
 
+export interface ChildProfile {
+  id?: string;
+  name: string;
+  dob?: string; // YYYY-MM-DD
+  gender?: BabyGender;
+  notes?: string;
+}
+
 export interface Client {
   id: string;
   fullName: string;
@@ -23,8 +31,9 @@ export interface Client {
   email?: string;
   address?: string;
   babyName?: string;
-  babyDob?: string; // ISO date or estimated due date
+  babyDob?: string; // YYYY-MM-DD
   babyGender?: BabyGender;
+  children?: ChildProfile[];
   notes?: string;
   totalBookings?: number;
   totalSpent?: number;
@@ -32,7 +41,15 @@ export interface Client {
   updatedAt: string;
 }
 
-export type PackageCategory = 'newborn' | 'maternity' | 'sitter_milestone' | 'family' | 'cake_smash' | 'other';
+export type PackageCategory = 
+  | 'Newborn Photography'
+  | 'Maternity Photography'
+  | 'Baby Photography'
+  | 'Cake Smash Photography'
+  | 'Family Photography'
+  | 'Couple Photography'
+  | 'Other'
+  | string;
 
 export interface PhotographyPackage {
   id: string;
@@ -41,8 +58,13 @@ export interface PhotographyPackage {
   price: number; // in NPR
   depositAmount: number; // minimum advance in NPR
   durationMinutes: number; // duration in minutes
-  inclusions: string[]; // e.g. ["25 Edited Photos", "3 Setups", "Parent & Sibling Included", "Premium Photo Album"]
+  editedPhotosCount?: number;
+  outfitChanges?: number;
+  propsIncluded?: boolean;
+  familyPortraitsIncluded?: boolean;
+  inclusions: string[]; // e.g. ["25 Edited High-Res Photos", "3 Thematic Setups", "Parent & Sibling Included"]
   description?: string;
+  internalNotes?: string;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -50,29 +72,54 @@ export interface PhotographyPackage {
 
 export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rescheduled';
 
+export interface PackageSnapshot {
+  id?: string;
+  name: string;
+  category?: string;
+  price: number;
+  durationMinutes: number;
+  inclusions: string[];
+  editedPhotosCount?: number;
+  outfitChanges?: number;
+  propsIncluded?: boolean;
+  familyPortraitsIncluded?: boolean;
+}
+
 export interface Booking {
   id: string;
-  bookingNumber: string; // e.g. NPN-2026-001
+  bookingNumber: string; // e.g. NPN-2026-0001
   clientId: string;
   clientName: string;
   clientPhone: string;
   clientEmail?: string;
   babyName?: string;
-  packageId: string;
+  babyDob?: string;
+  category: PackageCategory;
+  packageId?: string; // optional if custom booking
   packageName: string;
   packagePriceSnapshot: number; // Snapshot of package price at time of booking
+  packageSnapshot?: PackageSnapshot;
+  customAgreedPrice?: number;
   discountAmount: number; // NPR
   discountReason?: string;
-  totalAmount: number; // (packagePriceSnapshot - discountAmount)
+  totalAmount: number; // (agreed price - discountAmount)
   advancePaid: number; // Sum of paid advance payments
   remainingBalance: number; // (totalAmount - advancePaid)
-  appointmentDate: string; // YYYY-MM-DD
+  appointmentDate: string; // YYYY-MM-DD (Asia/Kathmandu)
   startTime: string; // HH:mm (24-hour format)
   endTime: string; // HH:mm (24-hour format)
+  durationMinutes: number;
   status: BookingStatus;
   location?: 'studio' | 'home' | 'outdoor';
   photographerName?: string;
+  specialInstructions?: string;
   notes?: string;
+  hasConflictOverride?: boolean;
+  conflictOverrideReason?: string;
+  rescheduledFromDate?: string;
+  rescheduledFromTime?: string;
+  rescheduleReason?: string;
+  cancelledAt?: string;
   cancellationReason?: string;
   createdAt: string;
   updatedAt: string;
@@ -91,7 +138,7 @@ export interface Payment {
   amount: number; // in NPR
   paymentType: PaymentType;
   paymentMethod: PaymentMethod;
-  paymentDate: string; // YYYY-MM-DD or ISO
+  paymentDate: string; // YYYY-MM-DD
   transactionReference?: string;
   notes?: string;
   recordedByUid: string;
@@ -130,7 +177,7 @@ export interface ActivityLog {
   id: string;
   userId: string;
   userName: string;
-  action: string; // e.g. "CREATED_BOOKING", "RECORDED_PAYMENT", "UPDATED_STATUS"
+  action: string; // e.g. "CREATED_BOOKING", "EDITED_BOOKING", "RESCHEDULED_BOOKING", "CANCELLED_BOOKING"
   entityType: 'booking' | 'client' | 'package' | 'payment' | 'expense' | 'auth';
   entityId: string;
   details: string;
@@ -140,10 +187,9 @@ export interface ActivityLog {
 export interface DashboardMetrics {
   totalBookingsThisMonth: number;
   upcomingBookingsCount: number;
-  monthlySalesRevenue: number; // Bookings sales total
-  monthlyCashCollected: number; // Actual payments received
-  monthlyExpenses: number; // Actual expenses paid
-  cashProfit: number; // monthlyCashCollected - monthlyExpenses
+  monthlySalesRevenue: number;
+  monthlyCashCollected: number;
+  monthlyExpenses: number;
+  cashProfit: number;
   pendingBalanceTotal: number;
 }
-

@@ -38,8 +38,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
+import { BookingDetailModal } from "@/components/calendar/booking-detail-modal";
+import { BookingModal } from "@/components/calendar/booking-modal";
+import { ClientDetailModal } from "@/components/clients/client-detail-modal";
+import { ClientModal } from "@/components/clients/client-modal";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [metrics, setMetrics] = useState<(DashboardMetrics & { totalAllTimeBookings: number }) | null>(null);
   const [todaySessions, setTodaySessions] = useState<Booking[]>([]);
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
@@ -48,34 +54,43 @@ export default function DashboardPage() {
   const [revenueTrend, setRevenueTrend] = useState<MonthlyTrendData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchDashboard() {
-      try {
-        setLoading(true);
-        const [dashMetrics, todayList, upcomingList, paymentsList, clientsList, trendList] =
-          await Promise.all([
-            getDashboardMetrics(),
-            getTodaySessions(),
-            getUpcomingBookings(5),
-            getRecentPayments(5),
-            getRecentClients(5),
-            getMonthlyRevenueTrend(),
-          ]);
+  // Detail & Action Modals
+  const [viewingBooking, setViewingBooking] = useState<Booking | null>(null);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
-        setMetrics(dashMetrics);
-        setTodaySessions(todayList);
-        setUpcomingBookings(upcomingList);
-        setRecentPayments(paymentsList);
-        setRecentClients(clientsList);
-        setRevenueTrend(trendList);
-      } catch (err) {
-        console.error("Dashboard data load error:", err);
-      } finally {
-        setLoading(false);
-      }
+  const [viewingClient, setViewingClient] = useState<Client | null>(null);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
+      const [dashMetrics, todayList, upcomingList, paymentsList, clientsList, trendList] =
+        await Promise.all([
+          getDashboardMetrics(),
+          getTodaySessions(),
+          getUpcomingBookings(6),
+          getRecentPayments(5),
+          getRecentClients(5),
+          getMonthlyRevenueTrend(),
+        ]);
+
+      setMetrics(dashMetrics);
+      setTodaySessions(todayList);
+      setUpcomingBookings(upcomingList);
+      setRecentPayments(paymentsList);
+      setRecentClients(clientsList);
+      setRevenueTrend(trendList);
+    } catch (err) {
+      console.error("Dashboard data load error:", err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    fetchDashboard();
+  useEffect(() => {
+    loadDashboard();
   }, []);
 
   return (
@@ -97,20 +112,26 @@ export default function DashboardPage() {
 
           {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-2.5">
-            <Link
-              href="/calendar"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#3D084B] hover:bg-[#32063E] text-white text-xs font-semibold tracking-wide shadow-subtle transition-all"
+            <button
+              onClick={() => {
+                setEditingBooking(null);
+                setIsBookingModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#3D084B] hover:bg-[#32063E] text-white text-xs font-semibold tracking-wide shadow-subtle transition-all cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>New Booking</span>
-            </Link>
-            <Link
-              href="/clients"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#EAD1DC] hover:bg-[#DFBFCE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle"
+            </button>
+            <button
+              onClick={() => {
+                setEditingClient(null);
+                setIsClientModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#EAD1DC] hover:bg-[#DFBFCE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle cursor-pointer"
             >
               <Users className="w-3.5 h-3.5 text-[#3D084B]" />
               <span>Add Client</span>
-            </Link>
+            </button>
             <Link
               href="/finance"
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#EAD1DC] hover:bg-[#DFBFCE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle"
@@ -289,10 +310,14 @@ export default function DashboardPage() {
               ) : (
                 <div className="divide-y divide-[#EBD8E1]">
                   {todaySessions.map((booking) => (
-                    <div key={booking.id} className="py-3.5 flex items-center justify-between gap-3">
+                    <div
+                      key={booking.id}
+                      onClick={() => setViewingBooking(booking)}
+                      className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#FAF2F7]/50 rounded-xl px-2 transition-colors group"
+                    >
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-[#332A34]">
+                          <p className="text-sm font-semibold text-[#332A34] group-hover:text-[#3D084B] transition-colors">
                             {booking.clientName}
                           </p>
                           <span
@@ -349,7 +374,7 @@ export default function DashboardPage() {
                 href="/calendar"
                 className="text-xs font-semibold text-[#3D084B] hover:text-[#68456E] flex items-center gap-1"
               >
-                <span>Calendar</span>
+                <span>Full Calendar</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
             </CardHeader>
@@ -368,7 +393,11 @@ export default function DashboardPage() {
               ) : (
                 <div className="divide-y divide-[#EBD8E1]">
                   {upcomingBookings.map((booking) => (
-                    <div key={booking.id} className="py-3.5 flex items-center justify-between gap-3">
+                    <div
+                      key={booking.id}
+                      onClick={() => setViewingBooking(booking)}
+                      className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#FAF2F7]/50 rounded-xl px-2 transition-colors group"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex flex-col items-center justify-center shrink-0">
                           <span className="text-[9px] font-bold uppercase text-[#3D084B]">
@@ -379,7 +408,7 @@ export default function DashboardPage() {
                           </span>
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-[#332A34]">
+                          <p className="text-sm font-semibold text-[#332A34] group-hover:text-[#3D084B] transition-colors">
                             {booking.clientName}
                           </p>
                           <p className="text-xs text-[#846F7F] mt-0.5">
@@ -498,9 +527,13 @@ export default function DashboardPage() {
               ) : (
                 <div className="divide-y divide-[#EBD8E1]">
                   {recentClients.map((client) => (
-                    <div key={client.id} className="py-3 flex items-center justify-between gap-3">
+                    <div
+                      key={client.id}
+                      onClick={() => setViewingClient(client)}
+                      className="py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#FAF2F7]/50 rounded-xl px-2 transition-colors group"
+                    >
                       <div>
-                        <p className="text-xs font-semibold text-[#332A34]">
+                        <p className="text-xs font-semibold text-[#332A34] group-hover:text-[#3D084B] transition-colors">
                           {client.fullName}
                         </p>
                         <p className="text-[11px] text-[#846F7F] flex items-center gap-2">
@@ -523,6 +556,49 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Modals from Dashboard */}
+        <BookingDetailModal
+          isOpen={Boolean(viewingBooking)}
+          onClose={() => setViewingBooking(null)}
+          booking={viewingBooking}
+          onEdit={(b) => {
+            setViewingBooking(null);
+            setEditingBooking(b);
+            setIsBookingModalOpen(true);
+          }}
+          onUpdated={loadDashboard}
+        />
+
+        <BookingModal
+          isOpen={isBookingModalOpen}
+          onClose={() => setIsBookingModalOpen(false)}
+          onSuccess={loadDashboard}
+          editingBooking={editingBooking}
+        />
+
+        <ClientDetailModal
+          isOpen={Boolean(viewingClient)}
+          onClose={() => setViewingClient(null)}
+          client={viewingClient}
+          onEdit={(c) => {
+            setViewingClient(null);
+            setEditingClient(c);
+            setIsClientModalOpen(true);
+          }}
+          onCreateBooking={(c) => {
+            router.push(`/calendar?newBooking=true&clientId=${c.id}`);
+          }}
+        />
+
+        <ClientModal
+          isOpen={isClientModalOpen}
+          onClose={() => setIsClientModalOpen(false)}
+          onSave={async (clientData) => {
+            await loadDashboard();
+          }}
+          initialClient={editingClient}
+        />
       </div>
     </StudioLayout>
   );
