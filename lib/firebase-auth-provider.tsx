@@ -48,7 +48,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         try {
           const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
+          const [userDoc, idTokenResult] = await Promise.all([
+            getDoc(userDocRef),
+            user.getIdTokenResult().catch(() => null),
+          ]);
 
           if (userDoc.exists()) {
             const data = userDoc.data() as StudioUser;
@@ -62,22 +65,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return;
             }
 
+            const effectiveRole = data.role || (idTokenResult?.claims?.role as UserRole) || "staff";
+
             setStudioUser({
               uid: user.uid,
               email: user.email || data.email,
               displayName: data.displayName || user.displayName || "Studio Staff",
-              role: data.role || "staff",
+              role: effectiveRole,
               phone: data.phone || "",
               active: true,
               createdAt: data.createdAt || new Date().toISOString(),
             });
           } else {
-            // Unprovisioned users default strictly to staff role
+            // Unprovisioned users default strictly to staff role unless token has verified admin claim
+            const tokenRole = idTokenResult?.claims?.role === "admin" ? "admin" : "staff";
             const defaultUser: StudioUser = {
               uid: user.uid,
               email: user.email || "",
               displayName: user.displayName || "Studio Staff",
-              role: "staff",
+              role: tokenRole,
               active: true,
               createdAt: new Date().toISOString(),
             };
@@ -105,6 +111,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const credential = await signInWithEmailAndPassword(auth, email, password);
+    // Force refresh ID token to ensure custom claims are immediately loaded
+    await credential.user.getIdToken(true);
+    
     const userDocRef = doc(db, "users", credential.user.uid);
     const userDoc = await getDoc(userDocRef);
     if (userDoc.exists()) {
