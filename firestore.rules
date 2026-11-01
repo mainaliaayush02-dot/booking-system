@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function: check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function: get user document
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Helper function: check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && (
+        getUserData().role == 'admin' ||
+        // Fallback: allow the first user or default admin
+        !exists(/databases/$(database)/documents/users/$(request.auth.uid))
+      );
+    }
+
+    // Helper function: check if user is staff or admin
+    function isStaffOrAdmin() {
+      return isAuthenticated() && (
+        getUserData().role == 'admin' || 
+        getUserData().role == 'staff' ||
+        !exists(/databases/$(database)/documents/users/$(request.auth.uid))
+      );
+    }
+
+    // Studio staff / users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Clients collection - internal staff only
+    match /clients/{clientId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Photography packages - staff can view and modify
+    match /packages/{packageId} {
+      allow read: if isAuthenticated();
+      allow write: if isStaffOrAdmin();
+    }
+
+    // Bookings collection
+    match /bookings/{bookingId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Payments collection - never allow deletion of financial records
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isStaffOrAdmin();
+      allow delete: if false; // Never silently delete financial transactions!
+    }
+
+    // Expenses collection
+    match /expenses/{expenseId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isStaffOrAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Activity logs - append-only audit trail
+    match /activity_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Append-only audit trail
+    }
+  }
+}
