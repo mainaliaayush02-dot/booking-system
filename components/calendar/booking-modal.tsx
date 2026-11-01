@@ -786,3 +786,4 @@ export function BookingModal({
     </>
   );
 }
+

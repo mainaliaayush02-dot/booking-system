@@ -1,6 +1,23 @@
 # Newborn Photography Nepal — Studio Manager
 ## Development Tracking & Changelog
 
+### Administrator Account Provisioning (Completed & Verified)
+- [x] **Target Administrator Record**:
+  - Firebase Project ID: `booking-b7580`
+  - Email: `newbornphotographynepal.studio@gmail.com`
+  - Firebase Auth UID: `99NIadNmrqVKWyWMngiMoAmYfOf1`
+  - Firestore Document: `users/99NIadNmrqVKWyWMngiMoAmYfOf1`
+  - Role: `admin` (Full studio administrator permissions)
+  - Active: `true`
+  - Display Name: `Newborn Photography Nepal Admin`
+- [x] **Trusted Provisioning Architecture**:
+  - `scripts/provision-existing-admin.mjs`: CLI script utilizing `firebase-admin` to verify existing Auth user, assign custom claims (`admin: true`), and create/update Firestore user document.
+  - `lib/firebase-admin.ts`: Secure server-side Firebase Admin utility supporting `FIREBASE_SERVICE_ACCOUNT_KEY` and `GOOGLE_APPLICATION_CREDENTIALS`.
+  - `app/api/admin/provision/route.ts`: Secure server-side endpoint for provisioning with server credentials.
+  - Zero hardcoding of credentials; preserves client-side Firestore security rules and prevents unauthorized elevation.
+
+---
+
 ### Phase 2 — Booking Operations (Completed & Verified)
 - [x] **Package Management Module (`/packages`)**:
   - Implemented full package catalog with search, category filters, and active/inactive status tabs.
