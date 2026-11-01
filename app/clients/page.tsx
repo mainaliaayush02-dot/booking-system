@@ -236,9 +236,17 @@ export default function ClientsPage() {
                   <span>Registered {formatDate(client.createdAt)}</span>
                   <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                     <button
+                      onClick={() => router.push(`/calendar?newBooking=true&clientId=${client.id}`)}
+                      title="Book session for this client"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#3D084B] hover:bg-[#32063E] text-white text-[10px] font-bold shadow-subtle transition-all cursor-pointer"
+                    >
+                      <Calendar className="w-3 h-3" />
+                      <span>Book</span>
+                    </button>
+                    <button
                       onClick={() => setViewingClient(client)}
                       title="View Client Details"
-                      className="p-1.5 rounded-lg bg-[#FAF2F7] hover:bg-[#F5E5EB] text-[#3D084B] border border-[#EBD8E1]"
+                      className="p-1.5 rounded-xl bg-[#FAF2F7] hover:bg-[#F5E5EB] text-[#3D084B] border border-[#EBD8E1] cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" />
                     </button>
@@ -248,7 +256,7 @@ export default function ClientsPage() {
                         setIsModalOpen(true);
                       }}
                       title="Edit Client"
-                      className="p-1.5 rounded-lg bg-[#FAF2F7] hover:bg-[#F5E5EB] text-[#3D084B] border border-[#EBD8E1]"
+                      className="p-1.5 rounded-xl bg-[#FAF2F7] hover:bg-[#F5E5EB] text-[#3D084B] border border-[#EBD8E1] cursor-pointer"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>

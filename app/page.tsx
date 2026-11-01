@@ -16,9 +16,11 @@ import {
   CalendarCheck,
   AlertCircle,
   UserCheck,
+  Heart,
+  Sparkles,
+  ChevronRight,
 } from "lucide-react";
 import {
-  getBookings,
   getDashboardMetrics,
   getTodaySessions,
   getUpcomingBookings,
@@ -95,31 +97,31 @@ export default function DashboardPage() {
 
   return (
     <StudioLayout>
-      <div className="space-y-8 pb-12">
+      <div className="space-y-6 sm:space-y-8 pb-12">
         {/* Studio Operations Header Banner */}
-        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-6 rounded-2xl shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
+        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-5 sm:p-7 rounded-3xl shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#3D084B] animate-pulse" />
-              <h2 className="font-serif text-2xl font-bold text-[#3D084B] tracking-tight">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#3D084B] animate-pulse shrink-0" />
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#3D084B] tracking-tight">
                 Studio Operations Overview
               </h2>
             </div>
-            <p className="text-xs sm:text-sm text-[#846F7F] mt-1 font-normal">
+            <p className="text-xs sm:text-sm text-[#846F7F] mt-1 font-normal leading-relaxed">
               Newborn Photography Nepal by Navin • Real-time bookings, payments, and financial health.
             </p>
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               onClick={() => {
                 setEditingBooking(null);
                 setIsBookingModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#3D084B] hover:bg-[#32063E] text-white text-xs font-semibold tracking-wide shadow-subtle transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#3D084B] hover:bg-[#32063E] text-white text-xs font-semibold tracking-wide shadow-subtle hover:shadow transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-[#3D084B]/30"
             >
-              <PlusCircle className="w-3.5 h-3.5" />
+              <PlusCircle className="w-4 h-4" />
               <span>New Booking</span>
             </button>
             <button
@@ -127,16 +129,16 @@ export default function DashboardPage() {
                 setEditingClient(null);
                 setIsClientModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#EAD1DC] hover:bg-[#DFBFCE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FAF2F7] hover:bg-[#F3E2EE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle cursor-pointer focus-visible:ring-2 focus-visible:ring-[#3D084B]/30"
             >
-              <Users className="w-3.5 h-3.5 text-[#3D084B]" />
+              <Users className="w-4 h-4 text-[#3D084B]" />
               <span>Add Client</span>
             </button>
             <Link
               href="/finance"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#EAD1DC] hover:bg-[#DFBFCE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FAF2F7] hover:bg-[#F3E2EE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle focus-visible:ring-2 focus-visible:ring-[#3D084B]/30"
             >
-              <Receipt className="w-3.5 h-3.5 text-[#3D084B]" />
+              <Receipt className="w-4 h-4 text-[#3D084B]" />
               <span>Record Payment</span>
             </Link>
           </div>
@@ -145,134 +147,134 @@ export default function DashboardPage() {
         {/* 6 Core Required Dashboard Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {/* 1. Total Bookings */}
-          <Card className="p-5 flex flex-col justify-between">
+          <Card className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#846F7F]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
                 Total Bookings
               </span>
-              <div className="w-8 h-8 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B]">
+              <div className="w-8 h-8 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] shrink-0">
                 <Calendar className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-3">
-              <span className="text-2xl font-serif font-bold text-[#3D084B] block leading-tight">
+            <div className="mt-4">
+              <span className="text-2xl sm:text-3xl font-serif font-bold text-[#3D084B] block leading-tight">
                 {loading ? "..." : metrics?.totalAllTimeBookings ?? 0}
               </span>
-              <span className="text-[11px] text-[#846F7F]">
-                {metrics?.totalBookingsThisMonth ?? 0} this month
+              <span className="text-[11px] text-[#846F7F] mt-1 block">
+                <strong className="text-[#3D084B]">{metrics?.totalBookingsThisMonth ?? 0}</strong> this month
               </span>
             </div>
           </Card>
 
           {/* 2. Monthly Sales (Contracted) */}
-          <Card className="p-5 flex flex-col justify-between">
+          <Card className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#846F7F]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
                 Monthly Sales
               </span>
-              <div className="w-8 h-8 rounded-xl bg-[#F3E2EE] border border-[#D6A3C7] flex items-center justify-center text-[#68456E]">
+              <div className="w-8 h-8 rounded-xl bg-[#F3E2EE] border border-[#D6A3C7] flex items-center justify-center text-[#68456E] shrink-0">
                 <TrendingUp className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-3">
-              <span className="text-2xl font-serif font-bold text-[#3D084B] block leading-tight">
+            <div className="mt-4">
+              <span className="text-xl sm:text-2xl font-serif font-bold text-[#3D084B] block leading-tight">
                 {loading ? "..." : formatNPR(metrics?.monthlySalesRevenue)}
               </span>
-              <span className="text-[11px] text-[#846F7F]">Contracted packages</span>
+              <span className="text-[11px] text-[#846F7F] mt-1 block">Contracted packages</span>
             </div>
           </Card>
 
           {/* 3. Amount Received (Cash) */}
-          <Card className="p-5 flex flex-col justify-between">
+          <Card className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#846F7F]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
                 Amount Received
               </span>
-              <div className="w-8 h-8 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B]">
+              <div className="w-8 h-8 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] shrink-0">
                 <CreditCard className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-3">
-              <span className="text-2xl font-serif font-bold text-[#3D084B] block leading-tight">
+            <div className="mt-4">
+              <span className="text-xl sm:text-2xl font-serif font-bold text-[#3D084B] block leading-tight">
                 {loading ? "..." : formatNPR(metrics?.monthlyCashCollected)}
               </span>
-              <span className="text-[11px] text-[#68456E] font-medium">Actual cash received</span>
+              <span className="text-[11px] text-emerald-800 font-semibold mt-1 block">Actual cash received</span>
             </div>
           </Card>
 
           {/* 4. Outstanding Payments */}
-          <Card className="p-5 flex flex-col justify-between">
+          <Card className="p-5 flex flex-col justify-between hover:border-amber-300 transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#846F7F]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
                 Outstanding
               </span>
-              <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
+              <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
                 <AlertCircle className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-3">
-              <span className="text-2xl font-serif font-bold text-amber-900 block leading-tight">
+            <div className="mt-4">
+              <span className="text-xl sm:text-2xl font-serif font-bold text-amber-900 block leading-tight">
                 {loading ? "..." : formatNPR(metrics?.pendingBalanceTotal)}
               </span>
-              <span className="text-[11px] text-amber-700 font-medium">Pending balances</span>
+              <span className="text-[11px] text-amber-700 font-semibold mt-1 block">Pending balances</span>
             </div>
           </Card>
 
           {/* 5. Total Expenses */}
-          <Card className="p-5 flex flex-col justify-between">
+          <Card className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#846F7F]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
                 Total Expenses
               </span>
-              <div className="w-8 h-8 rounded-xl bg-[#FBF2F6] border border-[#EBD8E1] flex items-center justify-center text-[#A4537F]">
+              <div className="w-8 h-8 rounded-xl bg-[#FBF2F6] border border-[#EBD8E1] flex items-center justify-center text-[#A4537F] shrink-0">
                 <Receipt className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-3">
-              <span className="text-2xl font-serif font-bold text-[#332A34] block leading-tight">
+            <div className="mt-4">
+              <span className="text-xl sm:text-2xl font-serif font-bold text-[#332A34] block leading-tight">
                 {loading ? "..." : formatNPR(metrics?.monthlyExpenses)}
               </span>
-              <span className="text-[11px] text-[#846F7F]">Studio overhead</span>
+              <span className="text-[11px] text-[#846F7F] mt-1 block">Studio overhead</span>
             </div>
           </Card>
 
           {/* 6. Net Cash Profit */}
-          <Card className="p-5 flex flex-col justify-between bg-[#FAF2F7]/70 border-[#D6A3C7]">
+          <Card className="p-5 flex flex-col justify-between bg-[#FAF2F7]/70 border-[#D6A3C7] hover:border-[#3D084B] transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#3D084B]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#3D084B]">
                 Net Cash Profit
               </span>
-              <div className="w-8 h-8 rounded-xl bg-white border border-[#EBD8E1] flex items-center justify-center text-[#3D084B]">
+              <div className="w-8 h-8 rounded-xl bg-white border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] shrink-0">
                 <DollarSign className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-3">
+            <div className="mt-4">
               <span
-                className={`text-2xl font-serif font-bold block leading-tight ${
+                className={`text-xl sm:text-2xl font-serif font-bold block leading-tight ${
                   (metrics?.cashProfit ?? 0) >= 0 ? "text-[#3D084B]" : "text-rose-700"
                 }`}
               >
                 {loading ? "..." : formatNPR(metrics?.cashProfit)}
               </span>
-              <span className="text-[11px] text-[#68456E] font-medium">Received − Expenses</span>
+              <span className="text-[11px] text-[#68456E] font-medium mt-1 block">Received − Expenses</span>
             </div>
           </Card>
         </div>
 
         {/* Monthly Revenue Trend Chart */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <CardTitle>Monthly Revenue & Expense Performance</CardTitle>
               <CardDescription>
                 Comparison of contracted sales booked vs cash collected vs studio expenses over the past 6 months (NPR).
               </CardDescription>
             </div>
-            <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-[#FAF2F7] border border-[#EBD8E1] text-[#3D084B]">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-[#FAF2F7] border border-[#EBD8E1] text-[#3D084B] w-fit">
               Cash Flow Trend
             </span>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-2">
             <RevenueChart data={revenueTrend} loading={loading} />
           </CardContent>
         </Card>
@@ -313,41 +315,50 @@ export default function DashboardPage() {
                     <div
                       key={booking.id}
                       onClick={() => setViewingBooking(booking)}
-                      className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#FAF2F7]/50 rounded-xl px-2 transition-colors group"
+                      className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#FAF2F7]/50 rounded-2xl px-2.5 transition-colors group"
                     >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-[#332A34] group-hover:text-[#3D084B] transition-colors">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-bold text-[#332A34] group-hover:text-[#3D084B] transition-colors truncate">
                             {booking.clientName}
                           </p>
                           <span
-                            className={`text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full border ${getStatusBadgeStyle(
+                            className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${getStatusBadgeStyle(
                               booking.status
                             )}`}
                           >
                             {booking.status}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-[#846F7F] mt-1">
-                          <span className="text-[#3D084B] font-medium">{booking.packageName}</span>
+                        <div className="flex items-center gap-2.5 text-xs text-[#846F7F] mt-1 flex-wrap">
+                          <span className="text-[#3D084B] font-semibold">{booking.packageName}</span>
                           <span>•</span>
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1 font-mono">
                             <Clock className="w-3 h-3 text-[#846F7F]" />
                             {formatTime12h(booking.startTime)} - {formatTime12h(booking.endTime)}
                           </span>
+                          {booking.babyName && (
+                            <>
+                              <span>•</span>
+                              <span className="flex items-center gap-1 text-[#68456E]">
+                                <Heart className="w-3 h-3 text-[#3D084B]" />
+                                {booking.babyName}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <span className="text-xs font-bold text-[#3D084B] block font-serif">
                           {formatNPR(booking.totalAmount)}
                         </span>
                         {booking.remainingBalance > 0 ? (
-                          <span className="text-[10px] text-amber-800 font-semibold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                          <span className="text-[10px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 mt-1 inline-block">
                             Due: {formatNPR(booking.remainingBalance)}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                            Paid
+                          <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 mt-1 inline-block">
+                            Paid in Full
                           </span>
                         )}
                       </div>
@@ -372,7 +383,7 @@ export default function DashboardPage() {
               </div>
               <Link
                 href="/calendar"
-                className="text-xs font-semibold text-[#3D084B] hover:text-[#68456E] flex items-center gap-1"
+                className="text-xs font-semibold text-[#3D084B] hover:text-[#68456E] flex items-center gap-1 shrink-0 transition-colors"
               >
                 <span>Full Calendar</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -396,32 +407,32 @@ export default function DashboardPage() {
                     <div
                       key={booking.id}
                       onClick={() => setViewingBooking(booking)}
-                      className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#FAF2F7]/50 rounded-xl px-2 transition-colors group"
+                      className="py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#FAF2F7]/50 rounded-2xl px-2.5 transition-colors group"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex flex-col items-center justify-center shrink-0">
-                          <span className="text-[9px] font-bold uppercase text-[#3D084B]">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-11 h-11 rounded-2xl bg-[#FAF2F7] border border-[#EBD8E1] flex flex-col items-center justify-center shrink-0 shadow-subtle">
+                          <span className="text-[9px] font-bold uppercase text-[#846F7F]">
                             {booking.appointmentDate ? booking.appointmentDate.split("-")[1] : "M"}
                           </span>
-                          <span className="text-xs font-serif font-bold text-[#3D084B] leading-tight">
+                          <span className="text-sm font-serif font-bold text-[#3D084B] leading-tight">
                             {booking.appointmentDate ? booking.appointmentDate.split("-")[2] : "D"}
                           </span>
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-[#332A34] group-hover:text-[#3D084B] transition-colors">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-[#332A34] group-hover:text-[#3D084B] transition-colors truncate">
                             {booking.clientName}
                           </p>
-                          <p className="text-xs text-[#846F7F] mt-0.5">
+                          <p className="text-xs text-[#846F7F] mt-0.5 truncate">
                             {booking.packageName} • {formatDate(booking.appointmentDate)}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <span className="text-xs font-bold text-[#3D084B] block font-serif">
                           {formatNPR(booking.totalAmount)}
                         </span>
                         <span
-                          className={`text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full border ${getStatusBadgeStyle(
+                          className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border mt-1 inline-block ${getStatusBadgeStyle(
                             booking.status
                           )}`}
                         >
@@ -452,7 +463,7 @@ export default function DashboardPage() {
               </div>
               <Link
                 href="/finance"
-                className="text-xs font-semibold text-[#3D084B] hover:text-[#68456E] flex items-center gap-1"
+                className="text-xs font-semibold text-[#3D084B] hover:text-[#68456E] flex items-center gap-1 shrink-0 transition-colors"
               >
                 <span>All Payments</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -474,15 +485,15 @@ export default function DashboardPage() {
                 <div className="divide-y divide-[#EBD8E1]">
                   {recentPayments.map((payment) => (
                     <div key={payment.id} className="py-3 flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-semibold text-[#332A34]">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-[#332A34] truncate">
                           {payment.clientName}
                         </p>
-                        <p className="text-[11px] text-[#846F7F]">
+                        <p className="text-[11px] text-[#846F7F] font-mono mt-0.5 truncate">
                           {payment.receiptNumber} • {payment.paymentMethod} • {formatDate(payment.paymentDate)}
                         </p>
                       </div>
-                      <span className="text-xs font-bold text-[#3D084B] font-serif">
+                      <span className="text-xs font-bold text-[#3D084B] font-serif shrink-0">
                         {formatNPR(payment.amount)}
                       </span>
                     </div>
@@ -506,7 +517,7 @@ export default function DashboardPage() {
               </div>
               <Link
                 href="/clients"
-                className="text-xs font-semibold text-[#3D084B] hover:text-[#68456E] flex items-center gap-1"
+                className="text-xs font-semibold text-[#3D084B] hover:text-[#68456E] flex items-center gap-1 shrink-0 transition-colors"
               >
                 <span>Client Directory</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -530,23 +541,28 @@ export default function DashboardPage() {
                     <div
                       key={client.id}
                       onClick={() => setViewingClient(client)}
-                      className="py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#FAF2F7]/50 rounded-xl px-2 transition-colors group"
+                      className="py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#FAF2F7]/50 rounded-2xl px-2.5 transition-colors group"
                     >
-                      <div>
-                        <p className="text-xs font-semibold text-[#332A34] group-hover:text-[#3D084B] transition-colors">
-                          {client.fullName}
-                        </p>
-                        <p className="text-[11px] text-[#846F7F] flex items-center gap-2">
-                          <span>{client.phone}</span>
-                          {client.babyName && (
-                            <>
-                              <span>•</span>
-                              <span className="text-[#3D084B] font-medium">Baby: {client.babyName}</span>
-                            </>
-                          )}
-                        </p>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] font-bold text-xs shrink-0 font-serif">
+                          {client.fullName.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-[#332A34] group-hover:text-[#3D084B] transition-colors truncate">
+                            {client.fullName}
+                          </p>
+                          <p className="text-[11px] text-[#846F7F] flex items-center gap-2 truncate mt-0.5">
+                            <span className="font-mono">{client.phone}</span>
+                            {client.babyName && (
+                              <>
+                                <span>•</span>
+                                <span className="text-[#3D084B] font-medium truncate">Baby: {client.babyName}</span>
+                              </>
+                            )}
+                          </p>
+                        </div>
                       </div>
-                      <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#FAF2F7] text-[#3D084B] border border-[#EBD8E1]">
+                      <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#FAF2F7] text-[#3D084B] border border-[#EBD8E1] shrink-0">
                         {client.totalBookings || 0} Bookings
                       </span>
                     </div>

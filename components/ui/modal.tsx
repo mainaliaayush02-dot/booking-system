@@ -50,8 +50,8 @@ export function Modal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+      {/* Backdrop with Soft Plum Blur */}
       <div
         className="fixed inset-0 bg-[#3D084B]/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
@@ -60,27 +60,27 @@ export function Modal({
       {/* Modal Dialog Content */}
       <div
         className={cn(
-          "relative w-full bg-[#FFFAFC] border border-[#EBD8E1] rounded-3xl shadow-float overflow-hidden z-10 my-8 transition-all animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col",
+          "relative w-full bg-[#FFFAFC] border border-[#EBD8E1] rounded-3xl shadow-float overflow-hidden z-10 my-auto transition-all animate-modal max-h-[92vh] flex flex-col",
           maxWidthClasses[maxWidth],
           className
         )}
       >
         {/* Header */}
         {(title || subtitle) && (
-          <div className="px-6 py-5 border-b border-[#EBD8E1] bg-[#FAF2F7]/50 flex items-center justify-between shrink-0">
-            <div>
+          <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-[#EBD8E1] bg-[#FAF2F7]/60 flex items-center justify-between shrink-0">
+            <div className="min-w-0 pr-3">
               {title && (
-                <h3 className="font-serif text-lg sm:text-xl font-bold text-[#3D084B] tracking-tight">
+                <h3 className="font-serif text-lg sm:text-xl font-bold text-[#3D084B] tracking-tight truncate">
                   {title}
                 </h3>
               )}
               {subtitle && (
-                <p className="text-xs text-[#846F7F] mt-0.5 leading-relaxed">{subtitle}</p>
+                <p className="text-xs text-[#846F7F] mt-0.5 leading-relaxed truncate">{subtitle}</p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl text-[#846F7F] hover:text-[#3D084B] hover:bg-[#F5E5EB] transition-colors"
+              className="p-1.5 rounded-xl text-[#846F7F] hover:text-[#3D084B] hover:bg-[#F5E5EB] transition-colors shrink-0 cursor-pointer"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -88,10 +88,11 @@ export function Modal({
           </div>
         )}
 
-        {/* Scrollable Body */}
-        <div className="p-6 overflow-y-auto flex-1">{children}</div>
+        {/* Scrollable Body with overscroll containment */}
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain">
+          {children}
+        </div>
       </div>
     </div>
   );
 }
-

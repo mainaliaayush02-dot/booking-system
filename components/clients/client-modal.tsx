@@ -334,12 +334,12 @@ export function ClientModal({
           />
         </div>
 
-        {/* Modal Actions */}
-        <div className="pt-4 border-t border-[#EBD8E1] flex items-center justify-end gap-3">
-          <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+        {/* Sticky Modal Actions */}
+        <div className="pt-4 border-t border-[#EBD8E1] flex items-center justify-end gap-3 sticky bottom-0 bg-[#FFFAFC] py-3.5 -mb-6 -mx-6 px-6 mt-6 shadow-card">
+          <Button type="button" variant="outline" onClick={onClose} disabled={submitting} className="cursor-pointer">
             Cancel
           </Button>
-          <Button type="submit" variant="primary" isLoading={submitting}>
+          <Button type="submit" variant="primary" isLoading={submitting} className="cursor-pointer shadow-subtle">
             {initialClient ? "Update Client" : "Register Client"}
           </Button>
         </div>

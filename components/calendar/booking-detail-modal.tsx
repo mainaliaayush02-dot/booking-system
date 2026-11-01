@@ -488,17 +488,17 @@ export function BookingDetailModal({
           </>
         )}
 
-        {/* Modal Bottom Actions */}
+        {/* Modal Bottom Actions - Sticky Footer */}
         {!isRescheduling && !isCancelling && (
-          <div className="pt-4 border-t border-[#EBD8E1] flex flex-wrap items-center justify-between gap-3">
+          <div className="pt-4 border-t border-[#EBD8E1] flex flex-wrap items-center justify-between gap-3 sticky bottom-0 bg-[#FFFAFC] py-3.5 -mb-6 -mx-6 px-6 shadow-card">
             {/* Quick Status Selector */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#846F7F] font-semibold">Change Status:</span>
+              <span className="text-xs text-[#846F7F] font-semibold">Status:</span>
               <select
                 value={booking.status}
                 onChange={(e) => handleStatusChange(e.target.value as BookingStatus)}
                 disabled={submitting}
-                className="px-2.5 py-1.5 bg-[#FAF2F7] border border-[#EBD8E1] rounded-xl text-xs font-bold text-[#3D084B]"
+                className="px-2.5 py-1.5 bg-[#FAF2F7] border border-[#EBD8E1] rounded-xl text-xs font-bold text-[#3D084B] cursor-pointer"
               >
                 <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
@@ -507,7 +507,7 @@ export function BookingDetailModal({
             </div>
 
             {/* Edit / Reschedule / Cancel Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {booking.status !== "cancelled" && (
                 <>
                   <Button
@@ -520,7 +520,7 @@ export function BookingDetailModal({
                       setRescheduleEndTime(booking.endTime);
                       setIsRescheduling(true);
                     }}
-                    className="gap-1.5 text-xs"
+                    className="gap-1.5 text-xs cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Reschedule</span>
@@ -534,7 +534,7 @@ export function BookingDetailModal({
                       onClose();
                       onEdit(booking);
                     }}
-                    className="gap-1.5 text-xs"
+                    className="gap-1.5 text-xs cursor-pointer"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span>Edit</span>
@@ -545,7 +545,7 @@ export function BookingDetailModal({
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsCancelling(true)}
-                    className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 text-xs gap-1"
+                    className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 text-xs gap-1 cursor-pointer"
                   >
                     <XCircle className="w-3.5 h-3.5" />
                     <span>Cancel</span>
@@ -553,7 +553,7 @@ export function BookingDetailModal({
                 </>
               )}
 
-              <Button type="button" variant="primary" size="sm" onClick={onClose}>
+              <Button type="button" variant="primary" size="sm" onClick={onClose} className="cursor-pointer">
                 Close
               </Button>
             </div>

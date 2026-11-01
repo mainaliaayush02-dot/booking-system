@@ -46,9 +46,9 @@ export function MonthView({
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
-    <div className="bg-[#FFFAFC] border border-[#EBD8E1] rounded-2xl overflow-hidden shadow-subtle">
+    <div className="bg-[#FFFAFC] border border-[#EBD8E1] rounded-3xl overflow-hidden shadow-subtle">
       {/* Day Headers */}
-      <div className="grid grid-cols-7 border-b border-[#EBD8E1] bg-[#FAF2F7]/70 text-center py-2.5">
+      <div className="grid grid-cols-7 border-b border-[#EBD8E1] bg-[#FAF2F7]/80 text-center py-3">
         {dayNames.map((d, i) => (
           <span
             key={i}
@@ -71,33 +71,36 @@ export function MonthView({
             <div
               key={dayIdx}
               onClick={() => onSelectDate(dateStr)}
-              className={`min-h-[110px] sm:min-h-[135px] p-1.5 sm:p-2 flex flex-col justify-between transition-colors cursor-pointer group hover:bg-[#FAF2F7]/50 ${
-                !isCurrentMonth ? "bg-[#FAF2F7]/20 text-[#846F7F]/50" : "bg-[#FFFAFC]"
+              className={`min-h-[105px] sm:min-h-[135px] p-1.5 sm:p-2.5 flex flex-col justify-between transition-colors cursor-pointer group hover:bg-[#FAF2F7]/60 ${
+                !isCurrentMonth ? "bg-[#FAF2F7]/25 text-[#846F7F]/40" : "bg-[#FFFAFC]"
               }`}
             >
               {/* Day Header Number */}
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-1.5">
                 <span
-                  className={`text-xs font-semibold rounded-full w-6 h-6 flex items-center justify-center transition-all ${
+                  className={`text-xs font-bold rounded-xl w-6 h-6 flex items-center justify-center transition-all ${
                     isToday
-                      ? "bg-[#3D084B] text-white font-bold shadow-subtle"
+                      ? "bg-[#3D084B] text-white shadow-subtle"
                       : isCurrentMonth
                       ? "text-[#332A34] group-hover:text-[#3D084B]"
-                      : "text-[#846F7F]/60"
+                      : "text-[#846F7F]/50"
                   }`}
                 >
                   {format(day, "d")}
                 </span>
 
                 {dayBookings.length > 0 && (
-                  <span className="text-[9px] font-bold text-[#846F7F]">
+                  <span className="text-[9px] font-bold text-[#846F7F] hidden sm:inline-block">
                     {dayBookings.length} {dayBookings.length === 1 ? "session" : "sessions"}
                   </span>
+                )}
+                {dayBookings.length > 0 && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#3D084B] sm:hidden" />
                 )}
               </div>
 
               {/* Day Bookings List */}
-              <div className="space-y-1 flex-1 overflow-y-auto max-h-[85px]">
+              <div className="space-y-1 flex-1 overflow-y-auto max-h-[90px]">
                 {dayBookings.slice(0, 3).map((b) => {
                   return (
                     <div
@@ -106,7 +109,7 @@ export function MonthView({
                         e.stopPropagation();
                         onSelectBooking(b);
                       }}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-medium border truncate transition-all shadow-subtle hover:scale-[1.02] ${getStatusBadgeStyle(
+                      className={`px-2 py-1 rounded-xl text-[10px] font-medium border truncate transition-all shadow-subtle hover:scale-[1.02] cursor-pointer ${getStatusBadgeStyle(
                         b.status
                       )}`}
                       title={`${b.clientName} - ${b.packageName} (${formatTime12h(b.startTime)})`}
@@ -116,7 +119,7 @@ export function MonthView({
                         <span>•</span>
                         <span className="truncate">{b.clientName}</span>
                       </div>
-                      <p className="truncate text-[9px] opacity-80">{b.packageName}</p>
+                      <p className="truncate text-[9px] opacity-80 mt-0.5">{b.packageName}</p>
                     </div>
                   );
                 })}
@@ -134,4 +137,3 @@ export function MonthView({
     </div>
   );
 }
-

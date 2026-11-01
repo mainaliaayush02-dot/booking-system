@@ -265,23 +265,41 @@ export function ClientDetailModal({
           )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="pt-4 border-t border-[#EBD8E1] flex items-center justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              onClose();
-              onEdit(client);
-            }}
-            className="gap-1.5"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-            <span>Edit Profile</span>
-          </Button>
+        {/* Sticky Footer Actions */}
+        <div className="pt-4 border-t border-[#EBD8E1] flex items-center justify-between sticky bottom-0 bg-[#FFFAFC] py-3.5 -mb-6 -mx-6 px-6 mt-6 shadow-card">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                onClose();
+                onEdit(client);
+              }}
+              className="gap-1.5 cursor-pointer"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>Edit Profile</span>
+            </Button>
 
-          <Button type="button" variant="primary" size="sm" onClick={onClose}>
+            {onCreateBooking && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  onClose();
+                  onCreateBooking(client);
+                }}
+                className="gap-1.5 cursor-pointer text-xs"
+              >
+                <PlusCircle className="w-3.5 h-3.5 text-[#3D084B]" />
+                <span>New Booking for Client</span>
+              </Button>
+            )}
+          </div>
+
+          <Button type="button" variant="primary" size="sm" onClick={onClose} className="cursor-pointer">
             Close
           </Button>
         </div>

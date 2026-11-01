@@ -150,15 +150,15 @@ function CalendarContent() {
     <StudioLayout>
       <div className="space-y-6 pb-12">
         {/* Top Header Card */}
-        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-6 rounded-2xl shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
+        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-5 sm:p-7 rounded-3xl shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <CalendarIcon className="w-5 h-5 text-[#3D084B]" />
-              <h2 className="font-serif text-2xl font-bold text-[#3D084B] tracking-tight">
+              <CalendarIcon className="w-5 h-5 text-[#3D084B] shrink-0" />
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#3D084B] tracking-tight">
                 Studio Booking Calendar
               </h2>
             </div>
-            <p className="text-xs sm:text-sm text-[#846F7F] mt-1 font-normal">
+            <p className="text-xs sm:text-sm text-[#846F7F] mt-1 font-normal leading-relaxed">
               Operating in Asia/Kathmandu (NPT) • Appointment conflict detection & session scheduling.
             </p>
           </div>
@@ -173,7 +173,7 @@ function CalendarContent() {
               setSelectedClientId(undefined);
               setIsBookingModalOpen(true);
             }}
-            className="gap-1.5 shadow-subtle"
+            className="gap-2 shadow-subtle shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>New Photography Booking</span>
@@ -181,51 +181,53 @@ function CalendarContent() {
         </div>
 
         {/* Calendar Controls & Navigation Bar */}
-        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-4 rounded-2xl shadow-subtle space-y-4">
+        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-4 sm:p-5 rounded-3xl shadow-subtle space-y-4">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
             {/* Left: Prev / Next / Title / Today */}
-            <div className="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-start">
-              <div className="flex items-center gap-1 bg-[#FAF2F7] border border-[#EBD8E1] p-1 rounded-xl">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto justify-between lg:justify-start">
+              <div className="flex items-center gap-1 bg-[#FAF2F7] border border-[#EBD8E1] p-1 rounded-2xl shrink-0">
                 <button
                   onClick={handlePrevious}
-                  className="p-1.5 rounded-lg text-[#3D084B] hover:bg-white transition-colors"
+                  className="p-1.5 rounded-xl text-[#3D084B] hover:bg-white transition-colors cursor-pointer"
                   aria-label="Previous"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   onClick={handleNext}
-                  className="p-1.5 rounded-lg text-[#3D084B] hover:bg-white transition-colors"
+                  className="p-1.5 rounded-xl text-[#3D084B] hover:bg-white transition-colors cursor-pointer"
                   aria-label="Next"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
 
-              <h3 className="font-serif text-lg sm:text-xl font-bold text-[#3D084B] min-w-[180px]">
+              <h3 className="font-serif text-lg sm:text-xl font-bold text-[#3D084B] min-w-[170px]">
                 {getHeaderTitle()}
               </h3>
 
-              <button
-                onClick={handleToday}
-                className="px-3 py-1.5 rounded-xl bg-[#FAF2F7] hover:bg-[#F5E5EB] text-[#3D084B] border border-[#EBD8E1] text-xs font-bold transition-all shadow-subtle"
-              >
-                Today
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleToday}
+                  className="px-3.5 py-1.5 rounded-xl bg-[#FAF2F7] hover:bg-[#F5E5EB] text-[#3D084B] border border-[#EBD8E1] text-xs font-bold transition-all shadow-subtle cursor-pointer"
+                >
+                  Today
+                </button>
 
-              <input
-                type="date"
-                value={format(currentDate, "yyyy-MM-dd")}
-                onChange={handleDateChange}
-                className="hidden sm:block px-2.5 py-1 bg-[#FAF2F7]/50 border border-[#EBD8E1] rounded-xl text-xs text-[#332A34] focus:outline-none"
-              />
+                <input
+                  type="date"
+                  value={format(currentDate, "yyyy-MM-dd")}
+                  onChange={handleDateChange}
+                  className="px-2.5 py-1.5 bg-[#FAF2F7]/60 border border-[#EBD8E1] rounded-xl text-xs text-[#332A34] focus:outline-none focus:ring-1 focus:ring-[#3D084B]"
+                />
+              </div>
             </div>
 
             {/* Right: View Mode Switcher Pills */}
-            <div className="flex items-center p-1 bg-[#FAF2F7] border border-[#EBD8E1] rounded-xl self-end lg:self-auto">
+            <div className="flex items-center p-1 bg-[#FAF2F7] border border-[#EBD8E1] rounded-2xl w-full sm:w-auto justify-center">
               <button
                 onClick={() => setViewMode("month")}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   viewMode === "month"
                     ? "bg-[#3D084B] text-white shadow-subtle"
                     : "text-[#846F7F] hover:text-[#3D084B]"
@@ -235,7 +237,7 @@ function CalendarContent() {
               </button>
               <button
                 onClick={() => setViewMode("week")}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   viewMode === "week"
                     ? "bg-[#3D084B] text-white shadow-subtle"
                     : "text-[#846F7F] hover:text-[#3D084B]"
@@ -245,7 +247,7 @@ function CalendarContent() {
               </button>
               <button
                 onClick={() => setViewMode("day")}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   viewMode === "day"
                     ? "bg-[#3D084B] text-white shadow-subtle"
                     : "text-[#846F7F] hover:text-[#3D084B]"
@@ -257,13 +259,13 @@ function CalendarContent() {
           </div>
 
           {/* Search & Category / Status Filters Bar */}
-          <div className="pt-3 border-t border-[#EBD8E1] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div className="pt-3 border-t border-[#EBD8E1] flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
             {/* Search */}
-            <div className="flex items-center gap-2 bg-[#FAF2F7]/50 border border-[#EBD8E1] px-3 py-1.5 rounded-xl w-full sm:w-72">
-              <Search className="w-3.5 h-3.5 text-[#846F7F]" />
+            <div className="flex items-center gap-2.5 bg-[#FAF2F7]/60 border border-[#EBD8E1] px-3.5 py-2 rounded-2xl w-full md:w-80">
+              <Search className="w-3.5 h-3.5 text-[#846F7F] shrink-0" />
               <input
                 type="text"
-                placeholder="Search by client or booking ID..."
+                placeholder="Search by client, ID, baby, or package..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-transparent text-xs text-[#332A34] placeholder-[#846F7F]/60 focus:outline-none"
@@ -271,13 +273,13 @@ function CalendarContent() {
             </div>
 
             {/* Dropdown Filters */}
-            <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto">
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-2.5 py-1.5 bg-[#FAF2F7]/50 border border-[#EBD8E1] rounded-xl text-xs text-[#332A34] focus:outline-none"
+                className="w-full sm:w-auto px-3 py-2 bg-[#FAF2F7]/60 border border-[#EBD8E1] rounded-2xl text-xs text-[#332A34] font-medium focus:outline-none focus:ring-1 focus:ring-[#3D084B]"
               >
-                <option value="All">All Categories</option>
+                <option value="All">All Photography Categories</option>
                 <option value="Newborn Photography">Newborn Photography</option>
                 <option value="Maternity Photography">Maternity Photography</option>
                 <option value="Baby Photography">Baby Photography</option>
@@ -289,15 +291,19 @@ function CalendarContent() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-2.5 py-1.5 bg-[#FAF2F7]/50 border border-[#EBD8E1] rounded-xl text-xs text-[#332A34] focus:outline-none"
+                className="w-full sm:w-auto px-3 py-2 bg-[#FAF2F7]/60 border border-[#EBD8E1] rounded-2xl text-xs text-[#332A34] font-medium focus:outline-none focus:ring-1 focus:ring-[#3D084B]"
               >
-                <option value="All">All Statuses</option>
+                <option value="All">All Booking Statuses</option>
                 <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="completed">Completed</option>
                 <option value="rescheduled">Rescheduled</option>
                 <option value="cancelled">Cancelled</option>
               </select>
+
+              <span className="text-[11px] text-[#846F7F] font-semibold hidden lg:inline-block shrink-0">
+                {filteredBookings.length} Bookings
+              </span>
             </div>
           </div>
         </div>

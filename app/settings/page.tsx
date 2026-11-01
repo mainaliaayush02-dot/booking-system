@@ -155,7 +155,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Admin Team Management */}
-        {isAdmin && (
+        {isAdmin ? (
           <Card className="p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#EBD8E1]">
               <div className="flex items-center gap-2">
@@ -262,13 +262,25 @@ export default function SettingsPage() {
                   type="submit"
                   variant="primary"
                   isLoading={submitting}
-                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold shadow-subtle"
+                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold shadow-subtle cursor-pointer"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span>{submitting ? "Adding..." : "Add Team Member"}</span>
                 </Button>
               </div>
             </form>
+          </Card>
+        ) : (
+          <Card className="p-6">
+            <div className="flex items-center gap-2 pb-3 border-b border-[#EBD8E1]">
+              <Shield className="w-4 h-4 text-[#846F7F]" />
+              <h3 className="font-serif font-bold text-[#3D084B]">
+                Staff Account Profile
+              </h3>
+            </div>
+            <p className="text-xs text-[#846F7F] mt-3 leading-relaxed">
+              You are signed in as <strong className="text-[#3D084B]">{studioUser?.displayName}</strong> ({studioUser?.email}) with role <strong className="text-[#3D084B] capitalize">{studioUser?.role}</strong>. Team provisioning and advanced settings are reserved for Studio Administrators.
+            </p>
           </Card>
         )}
       </div>

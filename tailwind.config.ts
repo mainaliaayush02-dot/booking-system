@@ -84,8 +84,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
-        serif: ["var(--font-cormorant)", "Georgia", "serif"],
+        sans: ["'Plus Jakarta Sans'", "Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        serif: ["'Cormorant Garamond'", "Georgia", "serif"],
       },
       boxShadow: {
         subtle: "0 1px 3px 0 rgba(61, 8, 75, 0.04), 0 1px 2px -1px rgba(61, 8, 75, 0.03)",
