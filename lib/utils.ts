@@ -43,14 +43,13 @@ export function formatDateWithDay(dateStr: string | Date | undefined | null): st
 
 // Get current date string in Kathmandu timezone: YYYY-MM-DD
 export function getTodayNepal(): string {
-  // Use Intl.DateTimeFormat to ensure exact Asia/Kathmandu time
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: NEPAL_TIMEZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   });
-  return formatter.format(new Date()); // Outputs YYYY-MM-DD
+  return formatter.format(new Date());
 }
 
 // Convert 24h time "14:30" to 12h time "2:30 PM"
@@ -62,25 +61,24 @@ export function formatTime12h(time24: string | undefined): string {
   if (isNaN(h)) return time24;
   const ampm = h >= 12 ? "PM" : "AM";
   h = h % 12;
-  h = h ? h : 12; // 0 hour is 12 AM
+  h = h ? h : 12;
   return `${h}:${m} ${ampm}`;
 }
 
-// Status styling badge helpers
+// Status styling badge helpers aligned with Deep Plum & Blush identity
 export function getStatusBadgeStyle(status: string) {
   switch (status?.toLowerCase()) {
     case "confirmed":
-      return "bg-emerald-50 text-emerald-800 border-emerald-200";
+      return "bg-[#FAF2F7] text-[#3D084B] border-[#D6A3C7]";
     case "completed":
-      return "bg-blue-50 text-blue-800 border-blue-200";
+      return "bg-emerald-50 text-emerald-800 border-emerald-200";
     case "pending":
       return "bg-amber-50 text-amber-800 border-amber-200";
     case "cancelled":
       return "bg-rose-50 text-rose-800 border-rose-200";
     case "rescheduled":
-      return "bg-purple-50 text-purple-800 border-purple-200";
+      return "bg-[#F3E2EE] text-[#68456E] border-[#EBD8E1]";
     default:
-      return "bg-sand-100 text-charcoal-700 border-sand-300";
+      return "bg-[#EAD1DC]/40 text-[#68456E] border-[#EBD8E1]";
   }
 }
-

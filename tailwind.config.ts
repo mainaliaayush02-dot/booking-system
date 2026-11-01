@@ -9,66 +9,91 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        cream: {
-          50: "#FDFBF7",
-          100: "#F9F6F0",
-          200: "#F2ECE1",
-          300: "#E6DDCF",
-          400: "#D4C7B3",
-          500: "#B8A68F",
+        // Official Brand Color System - Newborn Photography Nepal
+        brand: {
+          primary: "#3D084B", // Deep Plum
+          muted: "#68456E", // Muted Plum
+          bg: "#F5E5EB", // Blush Pink main background
+          secondaryBg: "#EAD1DC", // Dusty Rose
+          card: "#FFFAFC", // Soft White card
+          border: "#EBD8E1", // Soft Pink Border
+          text: "#332A34", // Charcoal typography
+          mutedText: "#846F7F", // Muted Rose Grey
         },
-        sand: {
-          50: "#FAF7F2",
-          100: "#F3EFE6",
-          200: "#E5DDD0",
-          300: "#CFC1AF",
-          400: "#B5A38E",
-          500: "#9C8770",
+        plum: {
+          50: "#FAF2F7",
+          100: "#F3E2EE",
+          200: "#E8C7DE",
+          300: "#D6A3C7",
+          400: "#BA73A6",
+          500: "#984784",
+          600: "#68456E", // Secondary brand: Muted Plum
+          700: "#541B5C",
+          800: "#460E50",
+          900: "#3D084B", // Primary brand: Deep Plum
+          950: "#260430",
         },
-        studio: {
-          50: "#F7F5F0",
-          100: "#EFEBE3",
-          200: "#DFD7C9",
-          300: "#C8BCA9",
-          400: "#AB9A82",
-          500: "#8C7355", // Main studio accent brown
-          600: "#745E44", // Deep studio brown
-          700: "#5B4A35",
-          800: "#443626",
-          900: "#2D2319",
+        blush: {
+          50: "#FFFAFC", // Soft white
+          100: "#FBF2F6",
+          200: "#F5E5EB", // Main background: Blush Pink
+          300: "#EBD8E1", // Soft pink border
+          400: "#EAD1DC", // Dusty rose
+          500: "#D4B3C4",
+          600: "#BA8FA6",
         },
         charcoal: {
-          50: "#F5F5F4",
-          100: "#E7E5E4",
-          200: "#D6D3D1",
-          300: "#A8A29E",
-          400: "#78716C",
-          500: "#57534E",
-          600: "#44403C",
-          700: "#33302E",
-          800: "#252321",
-          900: "#1A1817",
+          50: "#FAF7F9",
+          100: "#F2EDF0",
+          200: "#E2D9E0",
+          300: "#B8A9B5",
+          400: "#846F7F", // Muted rose grey
+          500: "#645561",
+          600: "#4E3F4B",
+          700: "#3D323C",
+          800: "#332A34", // Charcoal main typography
+          900: "#221A23",
+        },
+        // Mapped aliases for studio components
+        studio: {
+          50: "#FAF2F7",
+          100: "#F3E2EE",
+          200: "#EBD8E1",
+          300: "#D6A3C7",
+          400: "#BA73A6",
+          500: "#68456E",
+          600: "#4D1458",
+          700: "#3D084B", // Deep plum
+          800: "#32063E",
+          900: "#260430",
+        },
+        cream: {
+          50: "#F5E5EB", // Blush Pink
+          100: "#FFFAFC", // Soft White
+          200: "#EBD8E1", // Soft Pink Border
+          300: "#EAD1DC", // Dusty Rose
+          400: "#D4B3C4",
+          500: "#BA8FA6",
         },
         status: {
-          pending: "#B45309",
-          confirmed: "#2563EB",
-          completed: "#15803D",
-          cancelled: "#B91C1C",
-          rescheduled: "#7C3AED",
-        }
+          pending: "#874020",
+          confirmed: "#3D084B",
+          completed: "#1E6838",
+          cancelled: "#9B1C28",
+          rescheduled: "#5C2684",
+        },
       },
       fontFamily: {
         sans: ["var(--font-inter)", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
         serif: ["var(--font-cormorant)", "Georgia", "serif"],
       },
       boxShadow: {
-        subtle: "0 1px 3px 0 rgba(44, 41, 39, 0.04), 0 1px 2px -1px rgba(44, 41, 39, 0.04)",
-        card: "0 2px 6px -1px rgba(44, 41, 39, 0.05), 0 1px 4px -2px rgba(44, 41, 39, 0.05)",
-        float: "0 10px 25px -5px rgba(44, 41, 39, 0.08), 0 8px 10px -6px rgba(44, 41, 39, 0.04)",
+        subtle: "0 1px 3px 0 rgba(61, 8, 75, 0.04), 0 1px 2px -1px rgba(61, 8, 75, 0.03)",
+        card: "0 2px 6px -1px rgba(61, 8, 75, 0.05), 0 1px 4px -2px rgba(61, 8, 75, 0.04)",
+        float: "0 10px 25px -5px rgba(61, 8, 75, 0.08), 0 8px 10px -6px rgba(61, 8, 75, 0.04)",
       },
     },
   },
   plugins: [],
 };
 export default config;
-

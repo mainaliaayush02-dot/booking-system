@@ -3,7 +3,6 @@
 import React, { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/firebase-auth";
-import { Camera } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -23,21 +22,25 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-cream-50 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-[#F5E5EB] flex flex-col items-center justify-center p-4">
         <div className="flex flex-col items-center space-y-4">
-          <div className="w-14 h-14 rounded-2xl bg-studio-100 border border-studio-200 flex items-center justify-center text-studio-600 shadow-subtle animate-pulse">
-            <Camera className="w-7 h-7" />
+          <div className="w-24 h-24 rounded-2xl bg-[#FFFAFC] border border-[#EBD8E1] p-2 flex items-center justify-center shadow-card animate-pulse">
+            <img
+              src="/brand/logo.jpg"
+              alt="Newborn Photography Nepal"
+              className="w-full h-full object-contain"
+            />
           </div>
           <div className="text-center">
-            <h2 className="font-serif text-xl font-medium tracking-tight text-charcoal-900">
+            <h2 className="font-serif text-lg font-bold tracking-tight text-[#3D084B]">
               Newborn Photography Nepal
             </h2>
-            <p className="text-xs uppercase tracking-widest text-charcoal-400 mt-1">
-              Studio Management System
+            <p className="text-[10px] uppercase tracking-widest text-[#846F7F] mt-0.5 font-bold">
+              Studio Portal • By Navin
             </p>
           </div>
-          <div className="w-24 h-1 bg-cream-200 rounded-full overflow-hidden">
-            <div className="w-full h-full bg-studio-500 animate-[shimmer_1.5s_infinite]" />
+          <div className="w-24 h-1 bg-[#EBD8E1] rounded-full overflow-hidden">
+            <div className="w-full h-full bg-[#3D084B] animate-[shimmer_1.5s_infinite]" />
           </div>
         </div>
       </div>
@@ -50,10 +53,10 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
   if (requiredRole && studioUser?.role !== "admin" && studioUser?.role !== requiredRole) {
     return (
-      <div className="min-h-screen bg-cream-50 flex items-center justify-center p-6">
-        <div className="studio-card p-8 rounded-xl max-w-md text-center">
-          <h3 className="text-lg font-serif font-semibold text-charcoal-800">Access Restricted</h3>
-          <p className="text-sm text-charcoal-500 mt-2">
+      <div className="min-h-screen bg-[#F5E5EB] flex items-center justify-center p-6">
+        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-8 rounded-2xl max-w-md text-center shadow-subtle">
+          <h3 className="text-lg font-serif font-bold text-[#3D084B]">Access Restricted</h3>
+          <p className="text-xs text-[#846F7F] mt-2">
             You do not have administrative permission to view this section. Please contact your studio manager.
           </p>
         </div>
@@ -63,4 +66,3 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
   return <>{children}</>;
 }
-

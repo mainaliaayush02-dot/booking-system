@@ -17,16 +17,16 @@ export function Button({
   ...props
 }: ButtonProps) {
   const variantStyles = {
-    primary: "bg-studio-600 hover:bg-studio-700 text-white shadow-subtle hover:shadow border border-transparent",
-    secondary: "bg-[#FAF7F2] hover:bg-[#F3EFE6] text-charcoal-800 border border-[#E8DFD3]",
-    outline: "bg-transparent hover:bg-cream-100 text-charcoal-700 border border-[#E8DFD3]",
-    ghost: "bg-transparent hover:bg-cream-100 text-charcoal-700 border border-transparent",
-    danger: "bg-rose-600 hover:bg-rose-700 text-white shadow-subtle border border-transparent",
+    primary: "bg-[#3D084B] hover:bg-[#32063E] text-white shadow-subtle hover:shadow border border-transparent",
+    secondary: "bg-[#EAD1DC] hover:bg-[#DFBFCE] text-[#3D084B] border border-[#EBD8E1] font-semibold",
+    outline: "bg-transparent hover:bg-[#FAF2F7] text-[#3D084B] border border-[#3D084B]/40 hover:border-[#3D084B]",
+    ghost: "bg-transparent hover:bg-[#FAF2F7] text-[#332A34] border border-transparent",
+    danger: "bg-rose-700 hover:bg-rose-800 text-white shadow-subtle border border-transparent",
   };
 
   const sizeStyles = {
     sm: "text-xs px-3 py-1.5 rounded-lg",
-    md: "text-xs font-semibold px-4 py-2.5 rounded-lg",
+    md: "text-xs font-semibold px-4 py-2.5 rounded-xl",
     lg: "text-sm font-semibold px-5 py-3 rounded-xl",
   };
 

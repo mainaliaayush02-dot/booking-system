@@ -3,8 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --background: #FDFBF7;
-  --foreground: #1C1A19;
+  --background: #F5E5EB;
+  --foreground: #332A34;
+  --card: #FFFAFC;
+  --border: #EBD8E1;
+  --primary: #3D084B;
+  --secondary: #68456E;
 }
 
 body {
@@ -15,34 +19,34 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom subtle scrollbar */
+/* Custom subtle scrollbar with soft blush tones */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #F9F6F0;
+  background: #F5E5EB;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D4C7B3;
+  background: #D4B3C4;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #B8A68F;
+  background: #68456E;
 }
 
 /* Studio card hover transitions */
 .studio-card {
-  background-color: #FFFFFF;
-  border: 1px solid #EFE8DC;
-  box-shadow: 0 1px 3px 0 rgba(44, 41, 39, 0.03), 0 1px 2px -1px rgba(44, 41, 39, 0.03);
+  background-color: #FFFAFC;
+  border: 1px solid #EBD8E1;
+  box-shadow: 0 1px 3px 0 rgba(61, 8, 75, 0.03), 0 1px 2px -1px rgba(61, 8, 75, 0.03);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .studio-card:hover {
-  box-shadow: 0 4px 12px -2px rgba(44, 41, 39, 0.06), 0 2px 4px -2px rgba(44, 41, 39, 0.04);
+  box-shadow: 0 4px 14px -2px rgba(61, 8, 75, 0.06), 0 2px 5px -2px rgba(61, 8, 75, 0.04);
+  border-color: #D6A3C7;
 }
-

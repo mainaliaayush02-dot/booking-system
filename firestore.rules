@@ -2,76 +2,105 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function: check if user is authenticated
+    // Check if request is authenticated with a valid UID
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && request.auth.uid != null;
     }
 
-    // Helper function: get user document
+    // Check if user profile document exists in Firestore
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Get trusted user record
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Helper function: check if user is admin
+    // Check if user is active
+    function isActive() {
+      return isAuthenticated() && userExists() && getUserData().active == true;
+    }
+
+    // Check if user has admin role
     function isAdmin() {
-      return isAuthenticated() && (
-        getUserData().role == 'admin' ||
-        // Fallback: allow the first user or default admin
-        !exists(/databases/$(database)/documents/users/$(request.auth.uid))
-      );
+      return isActive() && getUserData().role == 'admin';
     }
 
-    // Helper function: check if user is staff or admin
+    // Check if user has staff or admin role
     function isStaffOrAdmin() {
-      return isAuthenticated() && (
+      return isActive() && (getUserData().role == 'admin' || getUserData().role == 'staff');
+    }
+
+    // Check if user has any authorized studio role (admin, staff, photographer)
+    function isStudioMember() {
+      return isActive() && (
         getUserData().role == 'admin' || 
-        getUserData().role == 'staff' ||
-        !exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        getUserData().role == 'staff' || 
+        getUserData().role == 'photographer'
       );
     }
 
-    // Studio staff / users collection
+    // Studio team members collection
     match /users/{userId} {
+      // Authenticated users can read team profiles
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      
+      // Only admins can provision new staff accounts
+      allow create: if isAdmin();
+      
+      // Admins can update any user; users can update their own phone or displayName
+      // Staff CANNOT change their own role or active status
+      allow update: if isAdmin() || (
+        isActive() && 
+        request.auth.uid == userId && 
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'active'])
+      );
+      
+      // Admins cannot delete their own account to prevent lockout
+      allow delete: if isAdmin() && request.auth.uid != userId;
     }
 
-    // Clients collection - internal staff only
+    // Clients collection
     match /clients/{clientId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isStudioMember();
+      allow create, update: if isStaffOrAdmin();
+      allow delete: if isAdmin();
     }
 
-    // Photography packages - staff can view and modify
+    // Photography packages collection
     match /packages/{packageId} {
-      allow read: if isAuthenticated();
+      allow read: if isStudioMember();
       allow write: if isStaffOrAdmin();
     }
 
     // Bookings collection
     match /bookings/{bookingId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    // Payments collection - never allow deletion of financial records
-    match /payments/{paymentId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isStaffOrAdmin();
-      allow delete: if false; // Never silently delete financial transactions!
-    }
-
-    // Expenses collection
-    match /expenses/{expenseId} {
-      allow read: if isAuthenticated();
+      allow read: if isStudioMember();
       allow create, update: if isStaffOrAdmin();
       allow delete: if isAdmin();
     }
 
-    // Activity logs - append-only audit trail
+    // Payments collection - strictly protected financial records
+    match /payments/{paymentId} {
+      allow read: if isStaffOrAdmin();
+      allow create: if isStaffOrAdmin();
+      allow update: if isAdmin();
+      allow delete: if false; // Strict: Never silently delete financial records!
+    }
+
+    // Studio expenses collection
+    match /expenses/{expenseId} {
+      allow read: if isStaffOrAdmin();
+      allow create, update: if isStaffOrAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Activity audit logs - append-only trail
     match /activity_logs/{logId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update, delete: if false; // Append-only audit trail
+      allow read: if isStudioMember();
+      allow create: if isStudioMember();
+      allow update, delete: if false; // Strict: Append-only audit trail
     }
   }
 }
-

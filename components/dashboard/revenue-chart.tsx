@@ -22,9 +22,9 @@ interface RevenueChartProps {
 export function RevenueChart({ data, loading = false }: RevenueChartProps) {
   if (loading) {
     return (
-      <div className="h-72 w-full flex items-center justify-center bg-cream-50/50 rounded-xl border border-cream-200">
-        <p className="text-xs text-charcoal-400 animate-pulse font-medium">
-          Loading studio financial trend...
+      <div className="h-72 w-full flex items-center justify-center bg-[#FAF2F7]/50 rounded-2xl border border-[#EBD8E1]">
+        <p className="text-xs text-[#846F7F] animate-pulse font-medium">
+          Loading studio financial performance...
         </p>
       </div>
     );
@@ -37,19 +37,22 @@ export function RevenueChart({ data, loading = false }: RevenueChartProps) {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white border border-[#EFE8DC] p-3 rounded-xl shadow-float text-xs space-y-1">
-          <p className="font-semibold text-charcoal-900 border-b border-[#F2ECE1] pb-1">
+        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-3.5 rounded-2xl shadow-float text-xs space-y-1.5">
+          <p className="font-bold text-[#3D084B] border-b border-[#EBD8E1] pb-1 font-serif">
             Month: {label}
           </p>
-          <div className="space-y-0.5 pt-1">
-            <p className="text-studio-700 font-medium">
-              Sales Booked: {formatNPR(payload[0]?.value)}
+          <div className="space-y-1 pt-1 font-medium">
+            <p className="text-[#3D084B] flex items-center justify-between gap-4">
+              <span>Sales Booked:</span>
+              <span className="font-bold">{formatNPR(payload[0]?.value)}</span>
             </p>
-            <p className="text-emerald-700 font-medium">
-              Cash Received: {formatNPR(payload[1]?.value)}
+            <p className="text-[#68456E] flex items-center justify-between gap-4">
+              <span>Cash Collected:</span>
+              <span className="font-bold">{formatNPR(payload[1]?.value)}</span>
             </p>
-            <p className="text-rose-700 font-medium">
-              Expenses Paid: {formatNPR(payload[2]?.value)}
+            <p className="text-[#A4537F] flex items-center justify-between gap-4">
+              <span>Expenses Paid:</span>
+              <span className="font-bold">{formatNPR(payload[2]?.value)}</span>
             </p>
           </div>
         </div>
@@ -61,9 +64,9 @@ export function RevenueChart({ data, loading = false }: RevenueChartProps) {
   return (
     <div className="w-full">
       {!hasAnyData && (
-        <div className="mb-3 px-3.5 py-2 rounded-lg bg-[#FAF8F5] border border-[#E8DFD3] flex items-center justify-between text-[11px] text-charcoal-500">
+        <div className="mb-3 px-4 py-2 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-between text-[11px] text-[#846F7F]">
           <span>Database currently has zero historical financial entries. Chart displays empty baseline.</span>
-          <span className="font-mono text-studio-600 font-semibold">NPR Currency</span>
+          <span className="font-mono text-[#3D084B] font-bold">NPR Currency</span>
         </div>
       )}
       <div className="h-72 w-full">
@@ -71,45 +74,48 @@ export function RevenueChart({ data, loading = false }: RevenueChartProps) {
           <BarChart
             data={data}
             margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
-            barGap={4}
+            barGap={6}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#F0ECE1" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#F0DEE7" vertical={false} />
             <XAxis
               dataKey="month"
-              tick={{ fill: "#78716C", fontSize: 11 }}
+              tick={{ fill: "#846F7F", fontSize: 11 }}
               tickLine={false}
-              axisLine={{ stroke: "#E5DDD0" }}
+              axisLine={{ stroke: "#EBD8E1" }}
             />
             <YAxis
-              tick={{ fill: "#78716C", fontSize: 10 }}
+              tick={{ fill: "#846F7F", fontSize: 10 }}
               tickLine={false}
-              axisLine={{ stroke: "#E5DDD0" }}
+              axisLine={{ stroke: "#EBD8E1" }}
               tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v)}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend
-              wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }}
+              wrapperStyle={{ fontSize: "11px", paddingTop: "14px", color: "#332A34" }}
               iconType="circle"
               iconSize={8}
             />
+            {/* Deep Plum - Primary Brand */}
             <Bar
               dataKey="salesBooked"
               name="Sales Booked"
-              fill="#8C7355"
+              fill="#3D084B"
               radius={[4, 4, 0, 0]}
               maxBarSize={28}
             />
+            {/* Muted Plum - Secondary Brand */}
             <Bar
               dataKey="cashReceived"
               name="Cash Collected"
-              fill="#10B981"
+              fill="#68456E"
               radius={[4, 4, 0, 0]}
               maxBarSize={28}
             />
+            {/* Dusty Rose / Rose Mauve */}
             <Bar
               dataKey="expenses"
               name="Studio Expenses"
-              fill="#F43F5E"
+              fill="#A4537F"
               radius={[4, 4, 0, 0]}
               maxBarSize={28}
             />

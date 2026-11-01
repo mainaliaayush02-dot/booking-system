@@ -9,7 +9,7 @@ export function Card({ className, children, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "bg-white border border-[#EFE8DC] rounded-xl shadow-subtle transition-all duration-200",
+        "bg-[#FFFAFC] border border-[#EBD8E1] rounded-2xl shadow-subtle transition-all duration-200",
         className
       )}
       {...props}
@@ -21,7 +21,7 @@ export function Card({ className, children, ...props }: CardProps) {
 
 export function CardHeader({ className, children, ...props }: CardProps) {
   return (
-    <div className={cn("px-6 py-5 border-b border-[#EFE8DC]", className)} {...props}>
+    <div className={cn("px-6 py-5 border-b border-[#EBD8E1]", className)} {...props}>
       {children}
     </div>
   );
@@ -29,7 +29,7 @@ export function CardHeader({ className, children, ...props }: CardProps) {
 
 export function CardTitle({ className, children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h3 className={cn("font-serif text-lg font-semibold text-charcoal-900 tracking-tight", className)} {...props}>
+    <h3 className={cn("font-serif text-lg font-semibold text-[#3D084B] tracking-tight", className)} {...props}>
       {children}
     </h3>
   );
@@ -37,7 +37,7 @@ export function CardTitle({ className, children, ...props }: React.HTMLAttribute
 
 export function CardDescription({ className, children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn("text-xs text-charcoal-500 mt-1 leading-relaxed", className)} {...props}>
+    <p className={cn("text-xs text-[#846F7F] mt-1 leading-relaxed font-normal", className)} {...props}>
       {children}
     </p>
   );
@@ -53,7 +53,7 @@ export function CardContent({ className, children, ...props }: CardProps) {
 
 export function CardFooter({ className, children, ...props }: CardProps) {
   return (
-    <div className={cn("px-6 py-4 border-t border-[#EFE8DC] bg-[#FAF8F5]", className)} {...props}>
+    <div className={cn("px-6 py-4 border-t border-[#EBD8E1] bg-[#FAF2F7]/50", className)} {...props}>
       {children}
     </div>
   );

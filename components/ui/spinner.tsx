@@ -18,12 +18,12 @@ export function Spinner({ size = "md", className, label }: SpinnerProps) {
     <div className="flex flex-col items-center justify-center gap-2">
       <div
         className={cn(
-          "rounded-full border-studio-200 border-t-studio-600 animate-spin",
+          "rounded-full border-[#EBD8E1] border-t-[#3D084B] animate-spin",
           sizeClasses[size],
           className
         )}
       />
-      {label && <p className="text-xs text-charcoal-500 font-medium">{label}</p>}
+      {label && <p className="text-xs text-[#846F7F] font-medium">{label}</p>}
     </div>
   );
 }

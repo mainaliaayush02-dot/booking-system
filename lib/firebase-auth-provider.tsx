@@ -8,7 +8,9 @@ import {
   signOut as firebaseSignOut,
   createUserWithEmailAndPassword,
   updateProfile,
+  getAuth,
 } from "firebase/auth";
+import { initializeApp, deleteApp } from "firebase/app";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import { StudioUser, UserRole } from "./types";
@@ -70,13 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               createdAt: data.createdAt || new Date().toISOString(),
             });
           } else {
-            // If user exists in Auth but has no Firestore profile yet,
-            // default to lowest privilege role (staff) - NEVER self-assign admin!
+            // Unprovisioned users default strictly to staff role
             const defaultUser: StudioUser = {
               uid: user.uid,
               email: user.email || "",
               displayName: user.displayName || "Studio Staff",
-              role: "staff", // Secure default: staff only, never admin
+              role: "staff",
               active: true,
               createdAt: new Date().toISOString(),
             };
@@ -122,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Provision new studio staff - trusted process by authenticated admin
+  // Preserves existing admin session via a isolated secondary app instance
   const createStudioUser = async (
     email: string,
     password: string,
@@ -133,22 +135,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Unauthorized: Only studio administrators can provision team member accounts.");
     }
 
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(cred.user, { displayName });
-    const userDocRef = doc(db, "users", cred.user.uid);
-    const newUserData: StudioUser = {
-      uid: cred.user.uid,
-      email,
-      displayName,
-      role,
-      phone: phone || "",
-      active: true,
-      createdAt: new Date().toISOString(),
-    };
-    await setDoc(userDocRef, {
-      ...newUserData,
-      timestamp: serverTimestamp(),
-    });
+    const secondaryAppName = `provision-${Date.now()}`;
+    const secondaryApp = initializeApp(auth.app.options, secondaryAppName);
+    const secondaryAuth = getAuth(secondaryApp);
+
+    try {
+      const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+      await updateProfile(cred.user, { displayName });
+
+      const userDocRef = doc(db, "users", cred.user.uid);
+      const newUserData: StudioUser = {
+        uid: cred.user.uid,
+        email,
+        displayName,
+        role,
+        phone: phone || "",
+        active: true,
+        createdAt: new Date().toISOString(),
+      };
+      await setDoc(userDocRef, {
+        ...newUserData,
+        timestamp: serverTimestamp(),
+      });
+
+      await firebaseSignOut(secondaryAuth);
+    } finally {
+      await deleteApp(secondaryApp).catch(() => {});
+    }
   };
 
   const isAdmin = studioUser?.role === "admin";

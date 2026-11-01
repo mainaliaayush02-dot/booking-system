@@ -14,12 +14,12 @@ export function Badge({
   ...props
 }: BadgeProps) {
   const variantStyles = {
-    default: "bg-studio-50 text-studio-800 border-studio-200",
+    default: "bg-[#FAF2F7] text-[#3D084B] border-[#EBD8E1]",
     success: "bg-emerald-50 text-emerald-800 border-emerald-200",
     warning: "bg-amber-50 text-amber-800 border-amber-200",
     danger: "bg-rose-50 text-rose-800 border-rose-200",
-    info: "bg-blue-50 text-blue-800 border-blue-200",
-    neutral: "bg-sand-100 text-charcoal-700 border-sand-300",
+    info: "bg-[#F3E2EE] text-[#541B5C] border-[#D6A3C7]",
+    neutral: "bg-[#EAD1DC]/40 text-[#68456E] border-[#EBD8E1]",
   };
 
   const sizeStyles = {

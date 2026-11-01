@@ -15,7 +15,7 @@ export function StudioLayout({ children, requiredRole }: StudioLayoutProps) {
 
   return (
     <ProtectedRoute requiredRole={requiredRole}>
-      <div className="min-h-screen flex bg-cream-50">
+      <div className="min-h-screen flex bg-[#F5E5EB]">
         {/* Sidebar */}
         <Sidebar
           mobileOpen={mobileOpen}
@@ -33,4 +33,3 @@ export function StudioLayout({ children, requiredRole }: StudioLayoutProps) {
     </ProtectedRoute>
   );
 }
-

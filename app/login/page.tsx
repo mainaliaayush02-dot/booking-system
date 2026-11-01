@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/firebase-auth";
-import { Camera, Lock, Mail, AlertCircle, ShieldAlert } from "lucide-react";
+import { Lock, Mail, AlertCircle, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
@@ -52,53 +52,54 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 relative overflow-hidden">
-      {/* Subtle Studio Backdrop Accent */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[400px] bg-gradient-to-b from-[#F2ECE1]/60 to-transparent blur-3xl pointer-events-none -z-10" />
+    <div className="min-h-screen bg-[#F5E5EB] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-12 relative overflow-hidden">
+      {/* Soft Ambient Studio Backdrop Accent */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-gradient-to-b from-[#EAD1DC]/60 to-transparent blur-3xl pointer-events-none -z-10" />
 
       {/* Main Container */}
       <div className="w-full max-w-md space-y-8">
-        {/* Studio Identity Header */}
-        <div className="text-center">
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-white border border-[#EFE8DC] shadow-card flex items-center justify-center text-studio-600 mb-5">
-            <Camera className="w-8 h-8" />
+        {/* Prominent Official Brand Logo */}
+        <div className="text-center flex flex-col items-center">
+          <div className="w-56 h-36 rounded-2xl bg-white border border-[#EBD8E1] shadow-card p-3 flex items-center justify-center mb-4 transition-transform hover:scale-[1.01]">
+            <img
+              src="/brand/logo.jpg"
+              alt="Newborn Photography Nepal by Navin"
+              className="w-full h-full object-contain"
+            />
           </div>
-          <h1 className="font-serif text-2xl sm:text-3xl font-semibold tracking-tight text-charcoal-900">
-            Newborn Photography Nepal
+          <h1 className="font-serif text-2xl font-bold tracking-tight text-[#3D084B]">
+            Studio Management Portal
           </h1>
-          <p className="mt-2 text-[11px] uppercase tracking-widest font-bold text-studio-600">
-            Studio Management System
-          </p>
-          <p className="mt-1 text-xs text-charcoal-500">
-            Internal Authorized Staff Portal
+          <p className="mt-1 text-xs text-[#846F7F]">
+            Authorized studio staff & photographer access only
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white border border-[#EFE8DC] shadow-card rounded-2xl p-6 sm:p-8">
-          <div className="mb-6 pb-4 border-b border-[#F2ECE1]">
-            <h2 className="text-sm font-serif font-semibold text-charcoal-800">
-              Studio Staff Sign In
+        <div className="bg-[#FFFAFC] border border-[#EBD8E1] shadow-card rounded-3xl p-6 sm:p-8">
+          <div className="mb-6 pb-4 border-b border-[#EBD8E1]">
+            <h2 className="text-sm font-serif font-bold text-[#3D084B]">
+              Staff Sign In
             </h2>
-            <p className="text-xs text-charcoal-500 mt-0.5">
+            <p className="text-xs text-[#846F7F] mt-0.5">
               Enter your provisioned studio credentials to proceed
             </p>
           </div>
 
           {error && (
-            <div className="mb-5 rounded-lg bg-rose-50 border border-rose-200 p-3.5 flex items-start gap-2.5">
+            <div className="mb-5 rounded-xl bg-rose-50 border border-rose-200 p-3.5 flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-rose-800 leading-relaxed font-medium">{error}</p>
+              <p className="text-xs text-rose-800 leading-relaxed font-semibold">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSignIn} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-700 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#332A34] mb-1.5">
                 Staff Email Address
               </label>
-              <div className="relative rounded-lg shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-charcoal-400">
+              <div className="relative rounded-xl shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#846F7F]">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -108,17 +109,17 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="staff@newbornphotonepal.com"
-                  className="block w-full pl-10 pr-3.5 py-2.5 bg-[#FAF8F5] border border-[#E8DFD3] rounded-lg text-sm text-charcoal-900 placeholder-charcoal-400 focus:outline-none focus:ring-2 focus:ring-studio-500/20 focus:border-studio-500 transition-colors"
+                  className="block w-full pl-10 pr-3.5 py-2.5 bg-[#FAF2F7]/50 border border-[#EBD8E1] rounded-xl text-sm text-[#332A34] placeholder-[#846F7F]/60 focus:outline-none focus:ring-2 focus:ring-[#3D084B]/20 focus:border-[#3D084B] transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-700 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#332A34] mb-1.5">
                 Security Password
               </label>
-              <div className="relative rounded-lg shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-charcoal-400">
+              <div className="relative rounded-xl shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#846F7F]">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -128,7 +129,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="block w-full pl-10 pr-3.5 py-2.5 bg-[#FAF8F5] border border-[#E8DFD3] rounded-lg text-sm text-charcoal-900 placeholder-charcoal-400 focus:outline-none focus:ring-2 focus:ring-studio-500/20 focus:border-studio-500 transition-colors"
+                  className="block w-full pl-10 pr-3.5 py-2.5 bg-[#FAF2F7]/50 border border-[#EBD8E1] rounded-xl text-sm text-[#332A34] placeholder-[#846F7F]/60 focus:outline-none focus:ring-2 focus:ring-[#3D084B]/20 focus:border-[#3D084B] transition-colors"
                 />
               </div>
             </div>
@@ -139,7 +140,7 @@ export default function LoginPage() {
                 variant="primary"
                 size="lg"
                 isLoading={submitting}
-                className="w-full text-xs font-semibold tracking-wider uppercase py-3"
+                className="w-full text-xs font-bold tracking-wider uppercase py-3 rounded-xl bg-[#3D084B] hover:bg-[#32063E] text-white shadow-subtle"
               >
                 Sign In to Studio Portal
               </Button>
@@ -147,20 +148,20 @@ export default function LoginPage() {
           </form>
 
           {/* Access Policy Notice */}
-          <div className="mt-6 pt-5 border-t border-[#F2ECE1] text-center">
-            <div className="flex items-center justify-center gap-1.5 text-xs text-charcoal-500">
-              <ShieldAlert className="w-3.5 h-3.5 text-studio-600" />
-              <span>Restricted Access: No public registration</span>
+          <div className="mt-6 pt-5 border-t border-[#EBD8E1] text-center">
+            <div className="flex items-center justify-center gap-1.5 text-xs text-[#846F7F]">
+              <ShieldAlert className="w-3.5 h-3.5 text-[#3D084B]" />
+              <span className="font-medium">Restricted Access: No public registration</span>
             </div>
-            <p className="text-[11px] text-charcoal-400 mt-1 leading-relaxed">
-              Studio accounts must be provisioned by a Studio Administrator.
+            <p className="text-[11px] text-[#846F7F] mt-1 leading-relaxed">
+              Studio accounts are provisioned exclusively by Studio Administration.
             </p>
           </div>
         </div>
 
         {/* System Timezone & Security notice */}
-        <div className="text-center text-[11px] text-charcoal-400">
-          <span>Operating in Asia/Kathmandu (NPT) • System ID: booking-b7580</span>
+        <div className="text-center text-[11px] text-[#846F7F]">
+          <span>Asia/Kathmandu (NPT) • Newborn Photography Nepal • By Navin</span>
         </div>
       </div>
     </div>
