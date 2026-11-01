@@ -33,3 +33,4 @@ export function StudioLayout({ children, requiredRole }: StudioLayoutProps) {
     </ProtectedRoute>
   );
 }
+

@@ -159,3 +159,4 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
     </>
   );
 }
+

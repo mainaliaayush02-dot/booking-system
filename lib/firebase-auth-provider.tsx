@@ -50,30 +50,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (userDoc.exists()) {
             const data = userDoc.data() as StudioUser;
+            
+            // Check if user account was disabled by studio director
+            if (data.active === false) {
+              await firebaseSignOut(auth);
+              setStudioUser(null);
+              setFirebaseUser(null);
+              setLoading(false);
+              return;
+            }
+
             setStudioUser({
               uid: user.uid,
               email: user.email || data.email,
               displayName: data.displayName || user.displayName || "Studio Staff",
               role: data.role || "staff",
               phone: data.phone || "",
-              active: data.active !== undefined ? data.active : true,
+              active: true,
               createdAt: data.createdAt || new Date().toISOString(),
             });
           } else {
-            // Initial seed/fallback: first authenticated user is set up as studio admin
-            const newUser: StudioUser = {
+            // If user exists in Auth but has no Firestore profile yet,
+            // default to lowest privilege role (staff) - NEVER self-assign admin!
+            const defaultUser: StudioUser = {
               uid: user.uid,
               email: user.email || "",
               displayName: user.displayName || "Studio Staff",
-              role: "admin",
+              role: "staff", // Secure default: staff only, never admin
               active: true,
               createdAt: new Date().toISOString(),
             };
-            await setDoc(userDocRef, {
-              ...newUser,
-              timestamp: serverTimestamp(),
-            });
-            setStudioUser(newUser);
+            setStudioUser(defaultUser);
           }
         } catch (error) {
           console.error("Error fetching studio user profile:", error);
@@ -96,7 +103,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    const userDocRef = doc(db, "users", credential.user.uid);
+    const userDoc = await getDoc(userDocRef);
+    if (userDoc.exists()) {
+      const data = userDoc.data() as StudioUser;
+      if (data.active === false) {
+        await firebaseSignOut(auth);
+        throw new Error("This studio account has been deactivated. Please contact your studio administrator.");
+      }
+    }
   };
 
   const signOut = async () => {
@@ -105,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setFirebaseUser(null);
   };
 
+  // Provision new studio staff - trusted process by authenticated admin
   const createStudioUser = async (
     email: string,
     password: string,
@@ -112,6 +129,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     role: UserRole,
     phone?: string
   ) => {
+    if (studioUser?.role !== "admin") {
+      throw new Error("Unauthorized: Only studio administrators can provision team member accounts.");
+    }
+
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName });
     const userDocRef = doc(db, "users", cred.user.uid);

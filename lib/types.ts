@@ -146,3 +146,4 @@ export interface DashboardMetrics {
   cashProfit: number; // monthlyCashCollected - monthlyExpenses
   pendingBalanceTotal: number;
 }
+

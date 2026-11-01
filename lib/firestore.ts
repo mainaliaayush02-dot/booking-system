@@ -6,13 +6,11 @@ import {
   setDoc,
   addDoc,
   updateDoc,
-  deleteDoc,
   query,
   where,
   orderBy,
   limit,
   serverTimestamp,
-  Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import {
@@ -23,8 +21,8 @@ import {
   StudioExpense,
   ActivityLog,
   DashboardMetrics,
-  StudioUser,
 } from "./types";
+import { getTodayNepal } from "./utils";
 
 // Helper: Log Studio Activity
 export async function logActivity(
@@ -57,6 +55,12 @@ export async function logActivity(
 // ----------------------------------------------------------------------
 export async function getClients(): Promise<Client[]> {
   const q = query(collection(db, "clients"), orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Client, "id">) }));
+}
+
+export async function getRecentClients(maxItems = 5): Promise<Client[]> {
+  const q = query(collection(db, "clients"), orderBy("createdAt", "desc"), limit(maxItems));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Client, "id">) }));
 }
@@ -158,30 +162,8 @@ export async function createPackage(
   return { id: docRef.id, ...pkgData, createdAt: now, updatedAt: now };
 }
 
-export async function updatePackage(
-  id: string,
-  pkgData: Partial<PhotographyPackage>,
-  user: { uid: string; displayName: string }
-): Promise<void> {
-  const ref = doc(db, "packages", id);
-  const now = new Date().toISOString();
-  await updateDoc(ref, {
-    ...pkgData,
-    updatedAt: now,
-  });
-
-  await logActivity(
-    user.uid,
-    user.displayName,
-    "UPDATED_PACKAGE",
-    "package",
-    id,
-    `Updated package ${pkgData.name || id}`
-  );
-}
-
 // ----------------------------------------------------------------------
-// BOOKINGS & CONFLICT DETECTION
+// BOOKINGS & SESSIONS
 // ----------------------------------------------------------------------
 export async function getBookings(): Promise<Booking[]> {
   const q = query(collection(db, "bookings"), orderBy("appointmentDate", "desc"));
@@ -189,48 +171,30 @@ export async function getBookings(): Promise<Booking[]> {
   return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }));
 }
 
-export async function getBookingById(id: string): Promise<Booking | null> {
-  const ref = doc(db, "bookings", id);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return null;
-  return { id: snap.id, ...(snap.data() as Omit<Booking, "id">) };
-}
-
-export async function getBookingsByDateRange(startDate: string, endDate: string): Promise<Booking[]> {
+export async function getTodaySessions(): Promise<Booking[]> {
+  const todayStr = getTodayNepal();
   const q = query(
     collection(db, "bookings"),
-    where("appointmentDate", ">=", startDate),
-    where("appointmentDate", "<=", endDate),
-    orderBy("appointmentDate", "asc")
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }));
-}
-
-// Check for overlapping bookings on the same date and time slot
-export async function detectBookingConflicts(
-  appointmentDate: string,
-  startTime: string,
-  endTime: string,
-  excludeBookingId?: string
-): Promise<Booking[]> {
-  const q = query(
-    collection(db, "bookings"),
-    where("appointmentDate", "==", appointmentDate),
+    where("appointmentDate", "==", todayStr),
     where("status", "!=", "cancelled")
   );
   const snapshot = await getDocs(q);
-  const existing = snapshot.docs
+  return snapshot.docs
     .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
-    .filter((b) => b.id !== excludeBookingId);
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+}
 
-  // Overlap condition:
-  // (StartA < EndB) and (EndA > StartB)
-  const conflicts = existing.filter((b) => {
-    return startTime < b.endTime && endTime > b.startTime;
-  });
-
-  return conflicts;
+export async function getUpcomingBookings(maxItems = 6): Promise<Booking[]> {
+  const todayStr = getTodayNepal();
+  const q = query(
+    collection(db, "bookings"),
+    where("appointmentDate", ">=", todayStr),
+    where("status", "!=", "cancelled"),
+    orderBy("appointmentDate", "asc"),
+    limit(maxItems)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }));
 }
 
 export async function generateBookingNumber(): Promise<string> {
@@ -308,7 +272,6 @@ export async function createBooking(
 
   const docRef = await addDoc(collection(db, "bookings"), newBooking);
 
-  // If initial advance payment was provided, record payment transaction
   if (advancePaid > 0 && data.paymentMethodInitial) {
     await recordPayment(
       {
@@ -323,11 +286,10 @@ export async function createBooking(
         notes: `Initial advance payment upon booking ${bookingNumber}`,
       },
       user,
-      false // don't update booking balance again since it's already set
+      false
     );
   }
 
-  // Update client total bookings
   try {
     const clientRef = doc(db, "clients", data.clientId);
     const clientSnap = await getDoc(clientRef);
@@ -355,28 +317,6 @@ export async function createBooking(
   return { id: docRef.id, ...newBooking };
 }
 
-export async function updateBooking(
-  id: string,
-  data: Partial<Booking>,
-  user: { uid: string; displayName: string }
-): Promise<void> {
-  const ref = doc(db, "bookings", id);
-  const now = new Date().toISOString();
-  await updateDoc(ref, {
-    ...data,
-    updatedAt: now,
-  });
-
-  await logActivity(
-    user.uid,
-    user.displayName,
-    "UPDATED_BOOKING",
-    "booking",
-    id,
-    `Updated booking details (${data.status ? `Status: ${data.status}` : ""})`
-  );
-}
-
 // ----------------------------------------------------------------------
 // PAYMENTS
 // ----------------------------------------------------------------------
@@ -391,6 +331,12 @@ export async function getPayments(bookingId?: string): Promise<Payment[]> {
   } else {
     q = query(collection(db, "payments"), orderBy("paymentDate", "desc"));
   }
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) }));
+}
+
+export async function getRecentPayments(maxItems = 5): Promise<Payment[]> {
+  const q = query(collection(db, "payments"), orderBy("createdAt", "desc"), limit(maxItems));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) }));
 }
@@ -431,7 +377,6 @@ export async function recordPayment(
 
   const docRef = await addDoc(collection(db, "payments"), newPayment);
 
-  // Recalculate and update booking balance automatically
   if (updateBookingBalance && data.bookingId) {
     const bookingRef = doc(db, "bookings", data.bookingId);
     const bookingSnap = await getDoc(bookingRef);
@@ -471,40 +416,21 @@ export async function getExpenses(): Promise<StudioExpense[]> {
   return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<StudioExpense, "id">) }));
 }
 
-export async function recordExpense(
-  data: Omit<StudioExpense, "id" | "recordedByUid" | "recordedByName" | "createdAt">,
-  user: { uid: string; displayName: string }
-): Promise<StudioExpense> {
-  const now = new Date().toISOString();
-  const newExpense: Omit<StudioExpense, "id"> = {
-    ...data,
-    recordedByUid: user.uid,
-    recordedByName: user.displayName,
-    createdAt: now,
-  };
-
-  const docRef = await addDoc(collection(db, "expenses"), newExpense);
-
-  await logActivity(
-    user.uid,
-    user.displayName,
-    "RECORDED_EXPENSE",
-    "expense",
-    docRef.id,
-    `Recorded expense "${data.title}" - NPR ${data.amount} (${data.category})`
-  );
-
-  return { id: docRef.id, ...newExpense };
+// ----------------------------------------------------------------------
+// DASHBOARD METRICS & REVENUE TREND
+// ----------------------------------------------------------------------
+export interface MonthlyTrendData {
+  month: string; // e.g. "Jun", "Jul", "Aug"
+  salesBooked: number;
+  cashReceived: number;
+  expenses: number;
 }
 
-// ----------------------------------------------------------------------
-// METRICS & DASHBOARD
-// ----------------------------------------------------------------------
-export async function getDashboardMetrics(): Promise<DashboardMetrics> {
+export async function getDashboardMetrics(): Promise<DashboardMetrics & { totalAllTimeBookings: number }> {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = String(now.getMonth() + 1).padStart(2, "0");
-  const monthPrefix = `${currentYear}-${currentMonth}`; // e.g. "2026-11"
+  const monthPrefix = `${currentYear}-${currentMonth}`;
 
   const [bookingsSnap, paymentsSnap, expensesSnap] = await Promise.all([
     getDocs(collection(db, "bookings")),
@@ -516,38 +442,32 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const allPayments = paymentsSnap.docs.map((d) => d.data() as Payment);
   const allExpenses = expensesSnap.docs.map((d) => d.data() as StudioExpense);
 
-  // Filter bookings for current month
   const thisMonthBookings = allBookings.filter(
     (b) => b.appointmentDate?.startsWith(monthPrefix) && b.status !== "cancelled"
   );
 
-  // Sales revenue = sum of totalAmount of bookings created for this month
   const monthlySalesRevenue = thisMonthBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
 
-  // Actual cash collected in current month
   const monthlyPayments = allPayments.filter((p) => p.paymentDate?.startsWith(monthPrefix));
   const monthlyCashCollected = monthlyPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
-  // Actual expenses paid in current month
   const monthlyExpensesList = allExpenses.filter((e) => e.expenseDate?.startsWith(monthPrefix));
   const monthlyExpenses = monthlyExpensesList.reduce((sum, e) => sum + (e.amount || 0), 0);
 
-  // Cash profit = payments received minus expenses paid
   const cashProfit = monthlyCashCollected - monthlyExpenses;
 
-  // Upcoming bookings
-  const todayStr = `${currentYear}-${currentMonth}-${String(now.getDate()).padStart(2, "0")}`;
+  const todayStr = getTodayNepal();
   const upcomingBookingsCount = allBookings.filter(
     (b) => b.appointmentDate >= todayStr && (b.status === "confirmed" || b.status === "pending")
   ).length;
 
-  // Total pending balance across all active bookings
   const pendingBalanceTotal = allBookings
     .filter((b) => b.status !== "cancelled" && b.status !== "completed")
     .reduce((sum, b) => sum + (b.remainingBalance || 0), 0);
 
   return {
     totalBookingsThisMonth: thisMonthBookings.length,
+    totalAllTimeBookings: allBookings.filter((b) => b.status !== "cancelled").length,
     upcomingBookingsCount,
     monthlySalesRevenue,
     monthlyCashCollected,
@@ -557,10 +477,54 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   };
 }
 
+export async function getMonthlyRevenueTrend(): Promise<MonthlyTrendData[]> {
+  const now = new Date();
+  const months: { label: string; key: string }[] = [];
+
+  // Generate last 6 months
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("en-US", { month: "short" });
+    months.push({ label, key });
+  }
+
+  const [bookingsSnap, paymentsSnap, expensesSnap] = await Promise.all([
+    getDocs(collection(db, "bookings")),
+    getDocs(collection(db, "payments")),
+    getDocs(collection(db, "expenses")),
+  ]);
+
+  const allBookings = bookingsSnap.docs.map((d) => d.data() as Booking);
+  const allPayments = paymentsSnap.docs.map((d) => d.data() as Payment);
+  const allExpenses = expensesSnap.docs.map((d) => d.data() as StudioExpense);
+
+  return months.map(({ label, key }) => {
+    const salesBooked = allBookings
+      .filter((b) => b.appointmentDate?.startsWith(key) && b.status !== "cancelled")
+      .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+
+    const cashReceived = allPayments
+      .filter((p) => p.paymentDate?.startsWith(key))
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    const expenses = allExpenses
+      .filter((e) => e.expenseDate?.startsWith(key))
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    return {
+      month: label,
+      salesBooked,
+      cashReceived,
+      expenses,
+    };
+  });
+}
+
 // ----------------------------------------------------------------------
 // ACTIVITY LOGS
 // ----------------------------------------------------------------------
-export async function getRecentActivityLogs(maxItems = 20): Promise<ActivityLog[]> {
+export async function getRecentActivityLogs(maxItems = 15): Promise<ActivityLog[]> {
   const q = query(
     collection(db, "activity_logs"),
     orderBy("timestamp", "desc"),
