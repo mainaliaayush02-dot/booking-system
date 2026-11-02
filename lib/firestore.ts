@@ -23,8 +23,17 @@ import {
   ActivityLog,
   DashboardMetrics,
   PackageSnapshot,
+  PaymentMethod,
+  PaymentType,
+  ExpenseCategory,
+  StudioUser,
 } from "./types";
 import { getTodayNepal } from "./utils";
+import {
+  calculatePaymentStatus,
+  validatePaymentAmount,
+  calculateFinancialSummary,
+} from "./finance-calculations";
 
 // ----------------------------------------------------------------------
 // ACTIVITY AUDIT LOGGING
@@ -52,6 +61,28 @@ export async function logActivity(
   } catch (err) {
     console.error("Failed to log activity:", err);
   }
+}
+
+export async function getActivityLogs(maxItems = 100): Promise<ActivityLog[]> {
+  try {
+    const q = query(collection(db, "activity_logs"), orderBy("timestamp", "desc"), limit(maxItems));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ActivityLog, "id">) }));
+  } catch (err) {
+    console.warn("Could not query activity logs with orderBy, falling back to base collection:", err);
+    const snap = await getDocs(collection(db, "activity_logs"));
+    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ActivityLog, "id">) }));
+    list.sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
+    return list.slice(0, maxItems);
+  }
+}
+
+// ----------------------------------------------------------------------
+// STUDIO TEAM & USERS
+// ----------------------------------------------------------------------
+export async function getStudioUsers(): Promise<StudioUser[]> {
+  const snapshot = await getDocs(collection(db, "users"));
+  return snapshot.docs.map((d) => ({ uid: d.id, ...(d.data() as Omit<StudioUser, "uid">) }));
 }
 
 // ----------------------------------------------------------------------
@@ -463,6 +494,7 @@ export async function createBooking(
     totalAmount,
     advancePaid: 0,
     remainingBalance: totalAmount,
+    paymentStatus: "unpaid",
     appointmentDate: data.appointmentDate,
     startTime: data.startTime,
     endTime: data.endTime,
@@ -633,8 +665,463 @@ export async function getExpenses(): Promise<StudioExpense[]> {
 }
 
 // ----------------------------------------------------------------------
-// DASHBOARD METRICS & REVENUE TREND
+// CONCURRENCY-SAFE RECEIPT SEQUENCE GENERATOR & PAYMENT LEDGER
 // ----------------------------------------------------------------------
+
+export interface RecordPaymentInput {
+  bookingId?: string;
+  bookingNumber?: string;
+  clientId?: string;
+  clientName: string;
+  amount: number;
+  paymentType: PaymentType;
+  paymentMethod: PaymentMethod;
+  paymentDate: string; // YYYY-MM-DD
+  transactionReference?: string;
+  notes?: string;
+}
+
+export async function recordPaymentWithReceipt(
+  paymentData: RecordPaymentInput,
+  user: { uid: string; displayName: string }
+): Promise<Payment> {
+  const targetYear = paymentData.paymentDate
+    ? parseInt(paymentData.paymentDate.split("-")[0], 10) || new Date().getFullYear()
+    : new Date().getFullYear();
+
+  const counterRef = doc(db, "counters", `receipts_${targetYear}`);
+  const hasLinkedBooking = Boolean(
+    paymentData.bookingId &&
+    paymentData.bookingId !== "general" &&
+    paymentData.bookingId !== "manual"
+  );
+  const bookingRef = hasLinkedBooking ? doc(db, "bookings", paymentData.bookingId!) : null;
+
+  const result = await runTransaction(db, async (transaction) => {
+    let bData: Booking | null = null;
+    let previousBalance = 0;
+    let newAdvance = 0;
+    let remainingBalanceAfter = 0;
+    let newPaymentStatus: Booking["paymentStatus"] = undefined;
+
+    if (bookingRef) {
+      const bSnap = await transaction.get(bookingRef);
+      if (!bSnap.exists()) {
+        throw new Error("Linked booking not found.");
+      }
+      bData = bSnap.data() as Booking;
+
+      const totalAmount = Number(bData.totalAmount) || 0;
+      const currentAdvance = Number(bData.advancePaid) || 0;
+      previousBalance = Math.max(0, totalAmount - currentAdvance);
+
+      const validation = validatePaymentAmount(totalAmount, currentAdvance, paymentData.amount);
+      if (!validation.valid) {
+        throw new Error(validation.error || "Payment exceeds remaining booking balance.");
+      }
+
+      newAdvance = currentAdvance + paymentData.amount;
+      remainingBalanceAfter = Math.max(0, totalAmount - newAdvance);
+      newPaymentStatus = calculatePaymentStatus(totalAmount, newAdvance);
+    }
+
+    // Sequence counter increment
+    const counterSnap = await transaction.get(counterRef);
+    let nextSeq = 1;
+    if (counterSnap.exists()) {
+      const cData = counterSnap.data();
+      nextSeq = (Number(cData.lastSeq) || 0) + 1;
+    }
+    transaction.set(
+      counterRef,
+      {
+        lastSeq: nextSeq,
+        year: targetYear,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    const receiptNumber = `REC-${targetYear}-${String(nextSeq).padStart(4, "0")}`;
+    const nowIso = new Date().toISOString();
+
+    const paymentCol = collection(db, "payments");
+    const newPaymentRef = doc(paymentCol);
+
+    const payload: Omit<Payment, "id"> = {
+      receiptNumber,
+      bookingId: paymentData.bookingId || "general",
+      bookingNumber: paymentData.bookingNumber || (bData ? bData.bookingNumber : "MANUAL"),
+      clientId: paymentData.clientId || (bData ? bData.clientId : "general"),
+      clientName: paymentData.clientName.trim(),
+      amount: paymentData.amount,
+      paymentType: paymentData.paymentType,
+      paymentMethod: paymentData.paymentMethod,
+      paymentDate: paymentData.paymentDate,
+      transactionReference: paymentData.transactionReference || "",
+      notes: paymentData.notes || "",
+      previousBalance: hasLinkedBooking ? previousBalance : 0,
+      remainingBalanceAfter: hasLinkedBooking ? remainingBalanceAfter : 0,
+      isMigration: false,
+      isReversed: false,
+      recordedByUid: user.uid,
+      recordedByName: user.displayName,
+      createdAt: nowIso,
+    };
+
+    transaction.set(newPaymentRef, {
+      ...payload,
+      timestamp: serverTimestamp(),
+    });
+
+    if (bookingRef && bData) {
+      transaction.update(bookingRef, {
+        advancePaid: newAdvance,
+        remainingBalance: remainingBalanceAfter,
+        paymentStatus: newPaymentStatus,
+        updatedAt: nowIso,
+      });
+    }
+
+    return { id: newPaymentRef.id, ...payload };
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "RECORD_PAYMENT",
+    "payment",
+    result.id,
+    `Recorded payment receipt ${result.receiptNumber} of NPR ${paymentData.amount} (${paymentData.paymentMethod}) for client ${paymentData.clientName}`
+  );
+
+  return result;
+}
+
+export async function createPayment(
+  paymentData: Omit<Payment, "id" | "receiptNumber" | "createdAt">,
+  user: { uid: string; displayName: string }
+): Promise<Payment> {
+  return recordPaymentWithReceipt(paymentData, user);
+}
+
+export async function reversePaymentWithAudit(
+  paymentId: string,
+  reason: string,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  const paymentRef = doc(db, "payments", paymentId);
+  const nowIso = new Date().toISOString();
+
+  await runTransaction(db, async (transaction) => {
+    const paymentSnap = await transaction.get(paymentRef);
+    if (!paymentSnap.exists()) {
+      throw new Error("Payment record not found.");
+    }
+    const payment = paymentSnap.data() as Payment;
+    if (payment.isReversed) {
+      throw new Error("This payment has already been reversed.");
+    }
+
+    const hasLinkedBooking = Boolean(
+      payment.bookingId &&
+      payment.bookingId !== "general" &&
+      payment.bookingId !== "manual"
+    );
+
+    if (hasLinkedBooking) {
+      const bookingRef = doc(db, "bookings", payment.bookingId);
+      const bookingSnap = await transaction.get(bookingRef);
+      if (bookingSnap.exists()) {
+        const bData = bookingSnap.data() as Booking;
+        const totalAmount = Number(bData.totalAmount) || 0;
+        const currentAdvance = Number(bData.advancePaid) || 0;
+        const newAdvance = Math.max(0, currentAdvance - payment.amount);
+        const newRemaining = Math.max(0, totalAmount - newAdvance);
+        const newStatus = calculatePaymentStatus(totalAmount, newAdvance);
+
+        transaction.update(bookingRef, {
+          advancePaid: newAdvance,
+          remainingBalance: newRemaining,
+          paymentStatus: newStatus,
+          updatedAt: nowIso,
+        });
+      }
+    }
+
+    transaction.update(paymentRef, {
+      isReversed: true,
+      reversalReason: reason.trim(),
+      reversedAt: nowIso,
+      reversedByUid: user.uid,
+      reversedByName: user.displayName,
+    });
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "REVERSED_PAYMENT",
+    "payment",
+    paymentId,
+    `Reversed payment receipt #${paymentId}. Reason: ${reason}`
+  );
+}
+
+// ----------------------------------------------------------------------
+// EXPENSE MANAGEMENT WORKFLOW WITH AUDIT & REVERSALS
+// ----------------------------------------------------------------------
+
+export async function createExpenseWithAudit(
+  expenseData: Omit<StudioExpense, "id" | "createdAt">,
+  user: { uid: string; displayName: string }
+): Promise<StudioExpense> {
+  const nowIso = new Date().toISOString();
+  const payload: Omit<StudioExpense, "id"> = {
+    ...expenseData,
+    isReversed: false,
+    recordedByUid: user.uid,
+    recordedByName: user.displayName,
+    createdAt: nowIso,
+  };
+
+  const docRef = await addDoc(collection(db, "expenses"), {
+    ...payload,
+    timestamp: serverTimestamp(),
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "LOG_EXPENSE",
+    "expense",
+    docRef.id,
+    `Logged studio expense of NPR ${expenseData.amount} for "${expenseData.title}" (${expenseData.category})`
+  );
+
+  return { id: docRef.id, ...payload };
+}
+
+export async function createExpense(
+  expenseData: Omit<StudioExpense, "id" | "createdAt">,
+  user: { uid: string; displayName: string }
+): Promise<StudioExpense> {
+  return createExpenseWithAudit(expenseData, user);
+}
+
+export async function updateExpenseWithAudit(
+  expenseId: string,
+  data: Partial<StudioExpense>,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  const expenseRef = doc(db, "expenses", expenseId);
+  const nowIso = new Date().toISOString();
+
+  await updateDoc(expenseRef, {
+    ...data,
+    updatedAt: nowIso,
+    updatedByUid: user.uid,
+    updatedByName: user.displayName,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "EDITED_EXPENSE",
+    "expense",
+    expenseId,
+    `Updated studio expense details: ${data.title || expenseId}`
+  );
+}
+
+export async function reverseExpenseWithAudit(
+  expenseId: string,
+  reason: string,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  const expenseRef = doc(db, "expenses", expenseId);
+  const nowIso = new Date().toISOString();
+
+  const snap = await getDoc(expenseRef);
+  if (!snap.exists()) {
+    throw new Error("Expense record not found.");
+  }
+  const current = snap.data() as StudioExpense;
+  if (current.isReversed) {
+    throw new Error("This expense has already been reversed.");
+  }
+
+  await updateDoc(expenseRef, {
+    isReversed: true,
+    reversalReason: reason.trim(),
+    reversedAt: nowIso,
+    reversedByUid: user.uid,
+    reversedByName: user.displayName,
+    updatedAt: nowIso,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "REVERSED_EXPENSE",
+    "expense",
+    expenseId,
+    `Reversed studio expense record #${expenseId}. Reason: ${reason}`
+  );
+}
+
+// ----------------------------------------------------------------------
+// HISTORICAL ADVANCES MIGRATION (Idempotent)
+// ----------------------------------------------------------------------
+
+export interface MigrationReport {
+  scannedBookings: number;
+  migratedPayments: number;
+  alreadySynchronized: number;
+  skippedBookings: number;
+  failedCount: number;
+  details: string[];
+}
+
+export async function migrateHistoricalAdvances(
+  user: { uid: string; displayName: string }
+): Promise<MigrationReport> {
+  const [bookingsSnap, paymentsSnap] = await Promise.all([
+    getDocs(collection(db, "bookings")),
+    getDocs(collection(db, "payments")),
+  ]);
+
+  const allBookings = bookingsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) })) as Booking[];
+  const allPayments = paymentsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) })) as Payment[];
+
+  // Group existing non-reversed payments by bookingId
+  const paymentsByBooking: Record<string, number> = {};
+  for (const p of allPayments) {
+    if (p.isReversed) continue;
+    if (p.bookingId) {
+      paymentsByBooking[p.bookingId] = (paymentsByBooking[p.bookingId] || 0) + (Number(p.amount) || 0);
+    }
+  }
+
+  let scanned = 0;
+  let migrated = 0;
+  let alreadySync = 0;
+  let skipped = 0;
+  let failed = 0;
+  const details: string[] = [];
+
+  for (const booking of allBookings) {
+    scanned++;
+
+    if (booking.status === "cancelled") {
+      skipped++;
+      continue;
+    }
+
+    const advancePaid = Number(booking.advancePaid) || 0;
+    if (advancePaid <= 0) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      const recordedPayments = paymentsByBooking[booking.id] || 0;
+      const diff = advancePaid - recordedPayments;
+
+      if (diff <= 0) {
+        alreadySync++;
+        if (!booking.paymentStatus) {
+          const correctStatus = calculatePaymentStatus(booking.totalAmount, advancePaid);
+          await updateDoc(doc(db, "bookings", booking.id), { paymentStatus: correctStatus });
+        }
+        continue;
+      }
+
+      const paymentYear = booking.createdAt
+        ? parseInt(booking.createdAt.slice(0, 4), 10) || new Date().getFullYear()
+        : new Date().getFullYear();
+      const counterRef = doc(db, "counters", `receipts_${paymentYear}`);
+
+      const receiptNumber = await runTransaction(db, async (tx) => {
+        const cSnap = await tx.get(counterRef);
+        let seq = 1;
+        if (cSnap.exists()) {
+          seq = (Number(cSnap.data().lastSeq) || 0) + 1;
+        }
+        tx.set(counterRef, { lastSeq: seq, year: paymentYear, updatedAt: serverTimestamp() }, { merge: true });
+        return `REC-${paymentYear}-${String(seq).padStart(4, "0")}`;
+      });
+
+      const nowIso = new Date().toISOString();
+      const paymentDate = booking.createdAt
+        ? booking.createdAt.slice(0, 10)
+        : booking.appointmentDate || getTodayNepal();
+
+      const paymentCol = collection(db, "payments");
+      const newPaymentRef = doc(paymentCol);
+
+      const newPayment: Omit<Payment, "id"> = {
+        receiptNumber,
+        bookingId: booking.id,
+        bookingNumber: booking.bookingNumber || "NPN-LEGACY",
+        clientId: booking.clientId || "general",
+        clientName: booking.clientName || "Client",
+        amount: diff,
+        paymentType: "advance",
+        paymentMethod: "cash",
+        paymentDate,
+        notes: "Historical advance migration",
+        previousBalance: booking.totalAmount - recordedPayments,
+        remainingBalanceAfter: booking.remainingBalance,
+        isMigration: true,
+        isReversed: false,
+        recordedByUid: user.uid,
+        recordedByName: user.displayName,
+        createdAt: nowIso,
+      };
+
+      await setDoc(newPaymentRef, {
+        ...newPayment,
+        timestamp: serverTimestamp(),
+      });
+
+      const correctStatus = calculatePaymentStatus(booking.totalAmount, advancePaid);
+      await updateDoc(doc(db, "bookings", booking.id), {
+        paymentStatus: correctStatus,
+        updatedAt: nowIso,
+      });
+
+      await logActivity(
+        user.uid,
+        user.displayName,
+        "MIGRATE_ADVANCE",
+        "payment",
+        newPaymentRef.id,
+        `Migrated historical advance of NPR ${diff} for booking ${booking.bookingNumber} (${receiptNumber})`
+      );
+
+      migrated++;
+      details.push(`Migrated ${receiptNumber}: NPR ${diff} for ${booking.bookingNumber} (${booking.clientName})`);
+    } catch (err: any) {
+      failed++;
+      details.push(`Failed for booking ${booking.bookingNumber}: ${err?.message || "Unknown error"}`);
+    }
+  }
+
+  return {
+    scannedBookings: scanned,
+    migratedPayments: migrated,
+    alreadySynchronized: alreadySync,
+    skippedBookings: skipped,
+    failedCount: failed,
+    details,
+  };
+}
+
+// ----------------------------------------------------------------------
+// CANONICAL DASHBOARD METRICS & REVENUE TREND
+// ----------------------------------------------------------------------
+
 export interface MonthlyTrendData {
   month: string;
   salesBooked: number;
@@ -643,10 +1130,8 @@ export interface MonthlyTrendData {
 }
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics & { totalAllTimeBookings: number }> {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = String(now.getMonth() + 1).padStart(2, "0");
-  const monthPrefix = `${currentYear}-${currentMonth}`;
+  const todayStr = getTodayNepal();
+  const monthPrefix = todayStr.slice(0, 7); // Strictly Asia/Kathmandu YYYY-MM
 
   const [bookingsSnap, paymentsSnap, expensesSnap] = await Promise.all([
     getDocs(collection(db, "bookings")),
@@ -654,32 +1139,34 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics & { totalA
     getDocs(collection(db, "expenses")),
   ]);
 
-  const allBookings = bookingsSnap.docs.map((d) => d.data() as Booking);
-  const allPayments = paymentsSnap.docs.map((d) => d.data() as Payment);
-  const allExpenses = expensesSnap.docs.map((d) => d.data() as StudioExpense);
+  const allBookings = bookingsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) })) as Booking[];
+  const allPayments = paymentsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) })) as Payment[];
+  const allExpenses = expensesSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<StudioExpense, "id">) })) as StudioExpense[];
 
   const thisMonthBookings = allBookings.filter(
     (b) => b.appointmentDate?.startsWith(monthPrefix) && b.status !== "cancelled"
   );
+  const monthlySalesRevenue = thisMonthBookings.reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
 
-  const monthlySalesRevenue = thisMonthBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+  const monthlyPayments = allPayments.filter(
+    (p) => !p.isReversed && p.paymentDate?.startsWith(monthPrefix)
+  );
+  const monthlyCashCollected = monthlyPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-  const monthlyPayments = allPayments.filter((p) => p.paymentDate?.startsWith(monthPrefix));
-  const monthlyCashCollected = monthlyPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-
-  const monthlyExpensesList = allExpenses.filter((e) => e.expenseDate?.startsWith(monthPrefix));
-  const monthlyExpenses = monthlyExpensesList.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const monthlyExpensesList = allExpenses.filter(
+    (e) => !e.isReversed && e.expenseDate?.startsWith(monthPrefix)
+  );
+  const monthlyExpenses = monthlyExpensesList.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
   const cashProfit = monthlyCashCollected - monthlyExpenses;
 
-  const todayStr = getTodayNepal();
   const upcomingBookingsCount = allBookings.filter(
     (b) => b.appointmentDate >= todayStr && (b.status === "confirmed" || b.status === "pending")
   ).length;
 
   const pendingBalanceTotal = allBookings
-    .filter((b) => b.status !== "cancelled" && b.status !== "completed")
-    .reduce((sum, b) => sum + (b.remainingBalance || 0), 0);
+    .filter((b) => b.status !== "cancelled")
+    .reduce((sum, b) => sum + (Number(b.remainingBalance) || 0), 0);
 
   return {
     totalBookingsThisMonth: thisMonthBookings.length,
@@ -717,15 +1204,15 @@ export async function getMonthlyRevenueTrend(): Promise<MonthlyTrendData[]> {
   return months.map(({ label, key }) => {
     const salesBooked = allBookings
       .filter((b) => b.appointmentDate?.startsWith(key) && b.status !== "cancelled")
-      .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+      .reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
 
     const cashReceived = allPayments
-      .filter((p) => p.paymentDate?.startsWith(key))
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
+      .filter((p) => !p.isReversed && p.paymentDate?.startsWith(key))
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
     const expenses = allExpenses
-      .filter((e) => e.expenseDate?.startsWith(key))
-      .reduce((sum, e) => sum + (e.amount || 0), 0);
+      .filter((e) => !e.isReversed && e.expenseDate?.startsWith(key))
+      .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
     return {
       month: label,

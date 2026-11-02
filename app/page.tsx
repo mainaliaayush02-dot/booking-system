@@ -44,10 +44,13 @@ import { BookingDetailModal } from "@/components/calendar/booking-detail-modal";
 import { BookingModal } from "@/components/calendar/booking-modal";
 import { ClientDetailModal } from "@/components/clients/client-detail-modal";
 import { ClientModal } from "@/components/clients/client-modal";
+import { useAuth } from "@/lib/firebase-auth";
 import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { studioUser } = useAuth();
+  const isPhotographer = studioUser?.role === "photographer";
   const [metrics, setMetrics] = useState<(DashboardMetrics & { totalAllTimeBookings: number }) | null>(null);
   const [todaySessions, setTodaySessions] = useState<Booking[]>([]);
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
@@ -55,6 +58,12 @@ export default function DashboardPage() {
   const [recentClients, setRecentClients] = useState<Client[]>([]);
   const [revenueTrend, setRevenueTrend] = useState<MonthlyTrendData[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Personalized greeting
+  const firstName = studioUser?.displayName ? studioUser.displayName.split(" ")[0] : "Navin";
+  const currentHour = new Date().getHours();
+  const greeting =
+    currentHour < 12 ? "Good morning" : currentHour < 17 ? "Good afternoon" : "Good evening";
 
   // Detail & Action Modals
   const [viewingBooking, setViewingBooking] = useState<Booking | null>(null);
@@ -70,20 +79,38 @@ export default function DashboardPage() {
       setLoading(true);
       const [dashMetrics, todayList, upcomingList, paymentsList, clientsList, trendList] =
         await Promise.all([
-          getDashboardMetrics(),
-          getTodaySessions(),
-          getUpcomingBookings(6),
-          getRecentPayments(5),
-          getRecentClients(5),
-          getMonthlyRevenueTrend(),
+          getDashboardMetrics().catch((err) => {
+            console.warn("Metrics load error:", err);
+            return null;
+          }),
+          getTodaySessions().catch((err) => {
+            console.warn("Today sessions load error:", err);
+            return [];
+          }),
+          getUpcomingBookings(6).catch((err) => {
+            console.warn("Upcoming bookings load error:", err);
+            return [];
+          }),
+          getRecentPayments(5).catch((err) => {
+            console.warn("Payments load error:", err);
+            return [];
+          }),
+          getRecentClients(5).catch((err) => {
+            console.warn("Clients load error:", err);
+            return [];
+          }),
+          getMonthlyRevenueTrend().catch((err) => {
+            console.warn("Revenue trend load error:", err);
+            return [];
+          }),
         ]);
 
       setMetrics(dashMetrics);
-      setTodaySessions(todayList);
-      setUpcomingBookings(upcomingList);
-      setRecentPayments(paymentsList);
-      setRecentClients(clientsList);
-      setRevenueTrend(trendList);
+      setTodaySessions(todayList || []);
+      setUpcomingBookings(upcomingList || []);
+      setRecentPayments(paymentsList || []);
+      setRecentClients(clientsList || []);
+      setRevenueTrend(trendList || []);
     } catch (err) {
       console.error("Dashboard data load error:", err);
     } finally {
@@ -99,27 +126,31 @@ export default function DashboardPage() {
     <StudioLayout>
       <div className="space-y-6 sm:space-y-8 pb-12">
         {/* Studio Operations Header Banner */}
-        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-5 sm:p-7 rounded-3xl shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-5">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#3D084B] animate-pulse shrink-0" />
-              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#3D084B] tracking-tight">
-                Studio Operations Overview
-              </h2>
+        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-6 sm:p-8 rounded-3xl shadow-studio flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-[#F5E5EB]/40 to-transparent rounded-full -mr-20 -mt-20 pointer-events-none" />
+          <div className="min-w-0 relative z-10">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#68456E]">
+                Studio Live Overview
+              </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#846F7F] mt-1 font-normal leading-relaxed">
-              Newborn Photography Nepal by Navin • Real-time bookings, payments, and financial health.
+            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-[#3D084B] tracking-tight">
+              {greeting}, {firstName}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#846F7F] mt-1.5 font-normal leading-relaxed max-w-xl">
+              Here is your daily snapshot of newborn photography bookings, client visits, and studio financial performance.
             </p>
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0 relative z-10">
             <button
               onClick={() => {
                 setEditingBooking(null);
                 setIsBookingModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#3D084B] hover:bg-[#32063E] text-white text-xs font-semibold tracking-wide shadow-subtle hover:shadow transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-[#3D084B]/30"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#3D084B] hover:bg-[#521363] text-white text-xs font-semibold tracking-wide shadow-subtle hover:shadow transition-all cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#3D084B]/30"
             >
               <PlusCircle className="w-4 h-4" />
               <span>New Booking</span>
@@ -129,25 +160,27 @@ export default function DashboardPage() {
                 setEditingClient(null);
                 setIsClientModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FAF2F7] hover:bg-[#F3E2EE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle cursor-pointer focus-visible:ring-2 focus-visible:ring-[#3D084B]/30"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF2F7] hover:bg-[#F3E2EE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#3D084B]/30"
             >
               <Users className="w-4 h-4 text-[#3D084B]" />
               <span>Add Client</span>
             </button>
-            <Link
-              href="/finance"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FAF2F7] hover:bg-[#F3E2EE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle focus-visible:ring-2 focus-visible:ring-[#3D084B]/30"
-            >
-              <Receipt className="w-4 h-4 text-[#3D084B]" />
-              <span>Record Payment</span>
-            </Link>
+            {!isPhotographer && (
+              <Link
+                href="/finance"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF2F7] hover:bg-[#F3E2EE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#3D084B]/30"
+              >
+                <Receipt className="w-4 h-4 text-[#3D084B]" />
+                <span>Record Payment</span>
+              </Link>
+            )}
           </div>
         </div>
 
         {/* 6 Core Required Dashboard Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {/* 1. Total Bookings */}
-          <Card className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all">
+          <Card className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all hover:shadow-subtle">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
                 Total Bookings
@@ -157,17 +190,17 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-4">
-              <span className="text-2xl sm:text-3xl font-serif font-bold text-[#3D084B] block leading-tight">
+              <span className="text-2xl sm:text-3xl font-serif font-bold text-[#3D084B] block leading-tight tabular-nums">
                 {loading ? "..." : metrics?.totalAllTimeBookings ?? 0}
               </span>
-              <span className="text-[11px] text-[#846F7F] mt-1 block">
+              <span className="text-[11px] text-[#846F7F] mt-1.5 block">
                 <strong className="text-[#3D084B]">{metrics?.totalBookingsThisMonth ?? 0}</strong> this month
               </span>
             </div>
           </Card>
 
           {/* 2. Monthly Sales (Contracted) */}
-          <Card className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all">
+          <Card className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all hover:shadow-subtle">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
                 Monthly Sales
@@ -177,33 +210,33 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-4">
-              <span className="text-xl sm:text-2xl font-serif font-bold text-[#3D084B] block leading-tight">
-                {loading ? "..." : formatNPR(metrics?.monthlySalesRevenue)}
+              <span className="text-xl sm:text-2xl font-serif font-bold text-[#3D084B] block leading-tight tabular-nums">
+                {loading ? "..." : isPhotographer ? "Restricted" : formatNPR(metrics?.monthlySalesRevenue)}
               </span>
-              <span className="text-[11px] text-[#846F7F] mt-1 block">Contracted packages</span>
+              <span className="text-[11px] text-[#846F7F] mt-1.5 block">Contracted packages</span>
             </div>
           </Card>
 
           {/* 3. Amount Received (Cash) */}
-          <Card className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all">
+          <Card className="p-5 flex flex-col justify-between hover:border-emerald-300 transition-all hover:shadow-subtle">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
                 Amount Received
               </span>
-              <div className="w-8 h-8 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
                 <CreditCard className="w-4 h-4" />
               </div>
             </div>
             <div className="mt-4">
-              <span className="text-xl sm:text-2xl font-serif font-bold text-[#3D084B] block leading-tight">
-                {loading ? "..." : formatNPR(metrics?.monthlyCashCollected)}
+              <span className="text-xl sm:text-2xl font-serif font-bold text-[#3D084B] block leading-tight tabular-nums">
+                {loading ? "..." : isPhotographer ? "Restricted" : formatNPR(metrics?.monthlyCashCollected)}
               </span>
-              <span className="text-[11px] text-emerald-800 font-semibold mt-1 block">Actual cash received</span>
+              <span className="text-[11px] text-emerald-800 font-semibold mt-1.5 block">Actual cash received</span>
             </div>
           </Card>
 
           {/* 4. Outstanding Payments */}
-          <Card className="p-5 flex flex-col justify-between hover:border-amber-300 transition-all">
+          <Card className="p-5 flex flex-col justify-between hover:border-amber-300 transition-all hover:shadow-subtle">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
                 Outstanding
@@ -213,15 +246,15 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-4">
-              <span className="text-xl sm:text-2xl font-serif font-bold text-amber-900 block leading-tight">
-                {loading ? "..." : formatNPR(metrics?.pendingBalanceTotal)}
+              <span className="text-xl sm:text-2xl font-serif font-bold text-amber-900 block leading-tight tabular-nums">
+                {loading ? "..." : isPhotographer ? "Restricted" : formatNPR(metrics?.pendingBalanceTotal)}
               </span>
-              <span className="text-[11px] text-amber-700 font-semibold mt-1 block">Pending balances</span>
+              <span className="text-[11px] text-amber-700 font-semibold mt-1.5 block">Pending balances</span>
             </div>
           </Card>
 
           {/* 5. Total Expenses */}
-          <Card className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all">
+          <Card className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all hover:shadow-subtle">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
                 Total Expenses
@@ -231,32 +264,32 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-4">
-              <span className="text-xl sm:text-2xl font-serif font-bold text-[#332A34] block leading-tight">
-                {loading ? "..." : formatNPR(metrics?.monthlyExpenses)}
+              <span className="text-xl sm:text-2xl font-serif font-bold text-[#332A34] block leading-tight tabular-nums">
+                {loading ? "..." : isPhotographer ? "Restricted" : formatNPR(metrics?.monthlyExpenses)}
               </span>
-              <span className="text-[11px] text-[#846F7F] mt-1 block">Studio overhead</span>
+              <span className="text-[11px] text-[#846F7F] mt-1.5 block">Studio overhead</span>
             </div>
           </Card>
 
           {/* 6. Net Cash Profit */}
-          <Card className="p-5 flex flex-col justify-between bg-[#FAF2F7]/70 border-[#D6A3C7] hover:border-[#3D084B] transition-all">
+          <Card className="p-5 flex flex-col justify-between bg-gradient-to-br from-[#FAF2F7] to-[#F5E5EB]/50 border-[#D6A3C7] hover:border-[#3D084B] transition-all hover:shadow-subtle">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#3D084B]">
                 Net Cash Profit
               </span>
-              <div className="w-8 h-8 rounded-xl bg-white border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-white border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] shrink-0 shadow-subtle">
                 <DollarSign className="w-4 h-4" />
               </div>
             </div>
             <div className="mt-4">
               <span
-                className={`text-xl sm:text-2xl font-serif font-bold block leading-tight ${
+                className={`text-xl sm:text-2xl font-serif font-bold block leading-tight tabular-nums ${
                   (metrics?.cashProfit ?? 0) >= 0 ? "text-[#3D084B]" : "text-rose-700"
                 }`}
               >
-                {loading ? "..." : formatNPR(metrics?.cashProfit)}
+                {loading ? "..." : isPhotographer ? "Restricted" : formatNPR(metrics?.cashProfit)}
               </span>
-              <span className="text-[11px] text-[#68456E] font-medium mt-1 block">Received − Expenses</span>
+              <span className="text-[11px] text-[#68456E] font-medium mt-1.5 block">Received − Expenses</span>
             </div>
           </Card>
         </div>
@@ -275,7 +308,18 @@ export default function DashboardPage() {
             </span>
           </CardHeader>
           <CardContent className="pt-2">
-            <RevenueChart data={revenueTrend} loading={loading} />
+            {isPhotographer ? (
+              <div className="h-48 flex items-center justify-center bg-[#FAF2F7]/50 rounded-2xl border border-[#EBD8E1] p-6 text-center">
+                <div>
+                  <p className="text-sm font-serif font-bold text-[#3D084B]">Financial Analytics Restricted</p>
+                  <p className="text-xs text-[#846F7F] mt-1 max-w-md">
+                    Studio revenue charts and financial performance metrics are restricted to Studio Admin and Staff accounts.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <RevenueChart data={revenueTrend} loading={loading} />
+            )}
           </CardContent>
         </Card>
 
@@ -350,16 +394,18 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-right shrink-0">
                         <span className="text-xs font-bold text-[#3D084B] block font-serif">
-                          {formatNPR(booking.totalAmount)}
+                          {isPhotographer ? "Scheduled" : formatNPR(booking.totalAmount)}
                         </span>
-                        {booking.remainingBalance > 0 ? (
-                          <span className="text-[10px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 mt-1 inline-block">
-                            Due: {formatNPR(booking.remainingBalance)}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 mt-1 inline-block">
-                            Paid in Full
-                          </span>
+                        {!isPhotographer && (
+                          booking.remainingBalance > 0 ? (
+                            <span className="text-[10px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 mt-1 inline-block">
+                              Due: {formatNPR(booking.remainingBalance)}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 mt-1 inline-block">
+                              Paid in Full
+                            </span>
+                          )
                         )}
                       </div>
                     </div>
@@ -429,7 +475,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-right shrink-0">
                         <span className="text-xs font-bold text-[#3D084B] block font-serif">
-                          {formatNPR(booking.totalAmount)}
+                          {isPhotographer ? "Confirmed" : formatNPR(booking.totalAmount)}
                         </span>
                         <span
                           className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border mt-1 inline-block ${getStatusBadgeStyle(
@@ -470,7 +516,11 @@ export default function DashboardPage() {
               </Link>
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {isPhotographer ? (
+                <div className="py-8 text-center text-xs text-[#846F7F]">
+                  Payment transaction records are restricted to Studio Admin and Staff.
+                </div>
+              ) : loading ? (
                 <p className="text-xs text-[#846F7F] py-8 text-center animate-pulse">
                   Loading payment transactions...
                 </p>

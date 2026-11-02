@@ -14,8 +14,16 @@ import {
 import { MonthlyTrendData } from "@/lib/firestore";
 import { formatNPR } from "@/lib/utils";
 
+export interface RevenueChartItem {
+  month?: string;
+  periodLabel?: string;
+  salesBooked: number;
+  cashReceived: number;
+  expenses: number;
+}
+
 interface RevenueChartProps {
-  data: MonthlyTrendData[];
+  data: (MonthlyTrendData | RevenueChartItem)[];
   loading?: boolean;
 }
 
@@ -89,7 +97,7 @@ export function RevenueChart({ data, loading = false }: RevenueChartProps) {
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#F0DEE7" vertical={false} />
             <XAxis
-              dataKey="month"
+              dataKey={data[0] && "periodLabel" in data[0] ? "periodLabel" : "month"}
               tick={{ fill: "#846F7F", fontSize: 11, fontWeight: 500 }}
               tickLine={false}
               axisLine={{ stroke: "#EBD8E1" }}

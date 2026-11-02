@@ -84,16 +84,16 @@ export default function ClientsPage() {
     <StudioLayout>
       <div className="space-y-6 pb-12">
         {/* Header Bar */}
-        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-6 rounded-2xl shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
+        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-6 sm:p-7 rounded-3xl shadow-studio flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-[#3D084B]" />
-              <h2 className="font-serif text-2xl font-bold text-[#3D084B] tracking-tight">
-                Client Directory
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#3D084B] tracking-tight">
+                Client Directory & Family CRM
               </h2>
             </div>
-            <p className="text-xs sm:text-sm text-[#846F7F] mt-1">
-              Registered families, parent contacts, baby profiles, and historical photography sessions.
+            <p className="text-xs sm:text-sm text-[#846F7F] mt-1 font-normal leading-relaxed">
+              Family profiles, parent contacts, baby birth dates, siblings, and historical photography sessions.
             </p>
           </div>
 
@@ -104,16 +104,61 @@ export default function ClientsPage() {
               setEditingClient(null);
               setIsModalOpen(true);
             }}
-            className="gap-1.5 shadow-subtle"
+            className="gap-2 shadow-subtle shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>Register New Client</span>
           </Button>
         </div>
 
+        {/* Quick Summary Metric Pills */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+          <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-4 rounded-2xl shadow-subtle flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
+                Total Families
+              </span>
+              <p className="font-serif text-2xl font-bold text-[#3D084B] mt-0.5 tabular-nums">
+                {loading ? "..." : clients.length}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B]">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+
+          <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-4 rounded-2xl shadow-subtle flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
+                Babies Profiled
+              </span>
+              <p className="font-serif text-2xl font-bold text-[#3D084B] mt-0.5 tabular-nums">
+                {loading ? "..." : clients.filter((c) => Boolean(c.babyName)).length}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-[#F5E5EB] border border-[#EBD8E1] flex items-center justify-center text-[#68456E]">
+              <Heart className="w-4 h-4" />
+            </div>
+          </div>
+
+          <div className="col-span-2 sm:col-span-1 bg-[#FFFAFC] border border-[#EBD8E1] p-4 rounded-2xl shadow-subtle flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#846F7F]">
+                Total Sessions
+              </span>
+              <p className="font-serif text-2xl font-bold text-[#3D084B] mt-0.5 tabular-nums">
+                {loading ? "..." : clients.reduce((acc, c) => acc + (c.totalBookings || 0), 0)}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B]">
+              <Calendar className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
         {/* Search Bar */}
         <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-4 rounded-2xl shadow-subtle flex flex-col sm:flex-row items-center gap-3 justify-between">
-          <div className="flex items-center gap-2.5 bg-[#FAF2F7]/50 border border-[#EBD8E1] px-4 py-2.5 rounded-xl w-full sm:max-w-md">
+          <div className="flex items-center gap-2.5 bg-[#FAF2F7]/60 border border-[#EBD8E1] px-4 py-2.5 rounded-xl w-full sm:max-w-md focus-within:ring-1 focus-within:ring-[#3D084B]">
             <Search className="w-4 h-4 text-[#846F7F]" />
             <input
               type="text"
@@ -162,29 +207,34 @@ export default function ClientsPage() {
             {filtered.map((client) => (
               <Card
                 key={client.id}
-                className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all cursor-pointer group"
+                className="p-5 flex flex-col justify-between hover:border-[#D6A3C7] transition-all cursor-pointer group hover:shadow-studio"
                 onClick={() => setViewingClient(client)}
               >
                 <div>
-                  {/* Top: Name & Bookings Badge */}
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-serif text-base font-bold text-[#3D084B] group-hover:text-[#68456E] transition-colors">
-                        {client.fullName}
-                      </h4>
-                      {client.babyName ? (
-                        <p className="text-xs text-[#68456E] font-semibold mt-0.5 flex items-center gap-1">
-                          <Heart className="w-3 h-3 text-[#3D084B]" />
-                          <span>Baby: {client.babyName}</span>
-                          {client.babyDob && (
-                            <span className="text-[11px] text-[#846F7F] font-normal">
-                              ({formatDate(client.babyDob)})
-                            </span>
-                          )}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-[#846F7F] mt-0.5 italic">Baby profile pending</p>
-                      )}
+                  {/* Top: Avatar & Name & Bookings Badge */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FAF2F7] to-[#F5E5EB] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] font-serif font-bold text-sm shadow-subtle shrink-0">
+                        {client.fullName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-serif text-base font-bold text-[#3D084B] group-hover:text-[#68456E] transition-colors truncate">
+                          {client.fullName}
+                        </h4>
+                        {client.babyName ? (
+                          <p className="text-xs text-[#68456E] font-semibold mt-0.5 flex items-center gap-1 truncate">
+                            <Heart className="w-3 h-3 text-[#3D084B] shrink-0" />
+                            <span className="truncate">Baby: {client.babyName}</span>
+                            {client.babyDob && (
+                              <span className="text-[11px] text-[#846F7F] font-normal shrink-0">
+                                ({formatDate(client.babyDob)})
+                              </span>
+                            )}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-[#846F7F] mt-0.5 italic">Baby profile pending</p>
+                        )}
+                      </div>
                     </div>
 
                     <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-[#FAF2F7] text-[#3D084B] border border-[#EBD8E1] shrink-0">

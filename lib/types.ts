@@ -71,6 +71,7 @@ export interface PhotographyPackage {
 }
 
 export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rescheduled';
+export type PaymentStatus = 'unpaid' | 'partially_paid' | 'paid';
 
 export interface PackageSnapshot {
   id?: string;
@@ -105,6 +106,7 @@ export interface Booking {
   totalAmount: number; // (agreed price - discountAmount)
   advancePaid: number; // Sum of paid advance payments
   remainingBalance: number; // (totalAmount - advancePaid)
+  paymentStatus?: PaymentStatus;
   appointmentDate: string; // YYYY-MM-DD (Asia/Kathmandu)
   startTime: string; // HH:mm (24-hour format)
   endTime: string; // HH:mm (24-hour format)
@@ -141,6 +143,14 @@ export interface Payment {
   paymentDate: string; // YYYY-MM-DD
   transactionReference?: string;
   notes?: string;
+  previousBalance?: number;
+  remainingBalanceAfter?: number;
+  isMigration?: boolean;
+  isReversed?: boolean;
+  reversalReason?: string;
+  reversedAt?: string;
+  reversedByUid?: string;
+  reversedByName?: string;
   recordedByUid: string;
   recordedByName: string;
   createdAt: string;
@@ -148,13 +158,17 @@ export interface Payment {
 
 export type ExpenseCategory = 
   | 'studio_rent' 
-  | 'equipment' 
-  | 'props_costumes' 
-  | 'utilities' 
-  | 'marketing' 
-  | 'salary' 
-  | 'printing_framing' 
-  | 'maintenance' 
+  | 'utilities'
+  | 'equipment'
+  | 'camera_accessories'
+  | 'props_costumes'
+  | 'baby_supplies'
+  | 'salary'
+  | 'marketing'
+  | 'transportation'
+  | 'maintenance'
+  | 'software_subscriptions'
+  | 'printing_framing'
   | 'refreshments'
   | 'other';
 
@@ -166,8 +180,18 @@ export interface StudioExpense {
   expenseDate: string; // YYYY-MM-DD
   paymentMethod: PaymentMethod;
   vendor?: string;
+  paidTo?: string;
+  referenceNumber?: string;
   notes?: string;
   receiptUrl?: string;
+  isReversed?: boolean;
+  reversalReason?: string;
+  reversedAt?: string;
+  reversedByUid?: string;
+  reversedByName?: string;
+  updatedAt?: string;
+  updatedByUid?: string;
+  updatedByName?: string;
   recordedByUid: string;
   recordedByName: string;
   createdAt: string;

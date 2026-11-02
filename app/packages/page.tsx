@@ -134,27 +134,27 @@ export default function PackagesPage() {
     <StudioLayout>
       <div className="space-y-6 pb-12">
         {/* Header Bar */}
-        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-6 rounded-2xl shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
+        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-6 sm:p-7 rounded-3xl shadow-studio flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
               <Package className="w-5 h-5 text-[#3D084B]" />
-              <h2 className="font-serif text-2xl font-bold text-[#3D084B] tracking-tight">
-                Photography Packages
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#3D084B] tracking-tight">
+                Photography Packages & Pricing
               </h2>
             </div>
-            <p className="text-xs sm:text-sm text-[#846F7F] mt-1">
+            <p className="text-xs sm:text-sm text-[#846F7F] mt-1 font-normal leading-relaxed">
               Configure session durations, photography deliverables, pricing snapshots, and inclusions.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             {packages.length === 0 && (
               <Button
                 variant="secondary"
                 size="md"
                 onClick={handleSeedTemplates}
                 isLoading={seedingTemplates}
-                className="gap-1.5"
+                className="gap-2"
               >
                 <Sparkles className="w-3.5 h-3.5 text-[#3D084B]" />
                 <span>Load Studio Templates (Rs. 7,999 - 31,999)</span>
@@ -168,7 +168,7 @@ export default function PackagesPage() {
                 setEditingPackage(null);
                 setIsModalOpen(true);
               }}
-              className="gap-1.5 shadow-subtle"
+              className="gap-2 shadow-subtle"
             >
               <Plus className="w-4 h-4" />
               <span>Create Package</span>
@@ -177,9 +177,9 @@ export default function PackagesPage() {
         </div>
 
         {/* Filter & Search Bar */}
-        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-4 rounded-2xl shadow-subtle flex flex-col lg:flex-row items-center gap-4 justify-between">
+        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-4 sm:p-5 rounded-3xl shadow-subtle flex flex-col lg:flex-row items-center gap-4 justify-between">
           {/* Search */}
-          <div className="flex items-center gap-2.5 bg-[#FAF2F7]/50 border border-[#EBD8E1] px-3.5 py-2 rounded-xl w-full lg:w-80">
+          <div className="flex items-center gap-2.5 bg-[#FAF2F7]/60 border border-[#EBD8E1] px-4 py-2.5 rounded-2xl w-full lg:w-80 focus-within:ring-1 focus-within:ring-[#3D084B]">
             <Search className="w-4 h-4 text-[#846F7F]" />
             <input
               type="text"
@@ -196,7 +196,7 @@ export default function PackagesPage() {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 bg-[#FAF2F7]/50 border border-[#EBD8E1] rounded-xl text-xs text-[#332A34] focus:outline-none focus:ring-2 focus:ring-[#3D084B]/20"
+              className="px-3.5 py-2.5 bg-[#FAF2F7]/60 border border-[#EBD8E1] rounded-2xl text-xs text-[#332A34] font-medium focus:outline-none focus:ring-1 focus:ring-[#3D084B]"
             >
               {CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>
@@ -206,10 +206,10 @@ export default function PackagesPage() {
             </select>
 
             {/* Status Pills */}
-            <div className="flex items-center p-1 bg-[#FAF2F7]/80 rounded-xl border border-[#EBD8E1]">
+            <div className="flex items-center p-1 bg-[#FAF2F7] rounded-2xl border border-[#EBD8E1]">
               <button
                 onClick={() => setStatusFilter("all")}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === "all"
                     ? "bg-[#3D084B] text-white shadow-subtle"
                     : "text-[#846F7F] hover:text-[#3D084B]"
@@ -219,7 +219,7 @@ export default function PackagesPage() {
               </button>
               <button
                 onClick={() => setStatusFilter("active")}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === "active"
                     ? "bg-[#3D084B] text-white shadow-subtle"
                     : "text-[#846F7F] hover:text-[#3D084B]"
@@ -229,7 +229,7 @@ export default function PackagesPage() {
               </button>
               <button
                 onClick={() => setStatusFilter("inactive")}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === "inactive"
                     ? "bg-[#3D084B] text-white shadow-subtle"
                     : "text-[#846F7F] hover:text-[#3D084B]"
@@ -271,14 +271,14 @@ export default function PackagesPage() {
             {filtered.map((pkg) => (
               <Card
                 key={pkg.id}
-                className={`p-6 flex flex-col justify-between hover:border-[#D6A3C7] transition-all ${
-                  !pkg.active ? "opacity-75 bg-[#FAF2F7]/30" : ""
+                className={`p-6 flex flex-col justify-between hover:border-[#D6A3C7] transition-all hover:shadow-studio ${
+                  !pkg.active ? "opacity-75 bg-[#FAF2F7]/40" : ""
                 }`}
               >
                 <div>
                   {/* Category & Status */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#3D084B] bg-[#FAF2F7] border border-[#EBD8E1] px-2.5 py-0.5 rounded-full">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#3D084B] bg-[#FAF2F7] border border-[#EBD8E1] px-3 py-1 rounded-full truncate">
                       {pkg.category}
                     </span>
                     <Badge
@@ -290,11 +290,11 @@ export default function PackagesPage() {
                   </div>
 
                   {/* Title & Price */}
-                  <h3 className="font-serif text-xl font-bold text-[#3D084B] mt-3">
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#3D084B] mt-4">
                     {pkg.name}
                   </h3>
-                  <div className="mt-2 flex items-baseline gap-1.5">
-                    <span className="text-2xl font-serif font-bold text-[#3D084B]">
+                  <div className="mt-2.5 flex items-baseline gap-2">
+                    <span className="text-2xl sm:text-3xl font-serif font-bold text-[#3D084B] tabular-nums">
                       {formatNPR(pkg.price)}
                     </span>
                     <span className="text-xs text-[#846F7F]">

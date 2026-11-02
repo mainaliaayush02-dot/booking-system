@@ -46,6 +46,7 @@ export function BookingDetailModal({
   onUpdated,
 }: BookingDetailModalProps) {
   const { studioUser, isAdmin } = useAuth();
+  const isPhotographer = studioUser?.role === "photographer";
 
   // Mode toggles
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -315,7 +316,7 @@ export function BookingDetailModal({
                   Contracted Total
                 </span>
                 <p className="text-base font-serif font-bold text-[#3D084B] mt-1">
-                  {formatNPR(booking.totalAmount)}
+                  {isPhotographer ? "Restricted" : formatNPR(booking.totalAmount)}
                 </p>
               </div>
 
@@ -324,7 +325,7 @@ export function BookingDetailModal({
                   Advance Paid
                 </span>
                 <p className="text-base font-serif font-bold text-emerald-800 mt-1">
-                  {formatNPR(booking.advancePaid || 0)}
+                  {isPhotographer ? "Restricted" : formatNPR(booking.advancePaid || 0)}
                 </p>
               </div>
 
@@ -333,7 +334,7 @@ export function BookingDetailModal({
                   Balance Due
                 </span>
                 <p className="text-base font-serif font-bold text-amber-800 mt-1">
-                  {formatNPR(booking.remainingBalance)}
+                  {isPhotographer ? "Restricted" : formatNPR(booking.remainingBalance)}
                 </p>
               </div>
             </div>
@@ -419,7 +420,7 @@ export function BookingDetailModal({
                   <span>Package Snapshot: {booking.packageName}</span>
                 </span>
                 <span className="font-bold text-[#3D084B] font-serif text-sm">
-                  {formatNPR(booking.packagePriceSnapshot)}
+                  {isPhotographer ? "Restricted" : formatNPR(booking.packagePriceSnapshot)}
                 </span>
               </div>
 

@@ -13,6 +13,7 @@ import {
   Settings,
   Clock,
   Sparkles,
+  Plus,
 } from "lucide-react";
 import { NEPAL_TIMEZONE } from "@/lib/utils";
 
@@ -61,14 +62,25 @@ export function TopNav({ onOpenMobileMenu }: TopNavProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone: NEPAL_TIMEZONE,
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-    setNepalDate(formatter.format(new Date()));
+    const updateTime = () => {
+      const now = new Date();
+      const dateFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: NEPAL_TIMEZONE,
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+      const timeFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: NEPAL_TIMEZONE,
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+      setNepalDate(`${dateFormatter.format(now)} • ${timeFormatter.format(now)}`);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 30000);
 
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -76,14 +88,17 @@ export function TopNav({ onOpenMobileMenu }: TopNavProps) {
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
       await signOut();
-      router.push("/login");
+      router.replace("/login");
     } catch (err) {
       console.error("Logout failed:", err);
     } finally {
@@ -97,7 +112,7 @@ export function TopNav({ onOpenMobileMenu }: TopNavProps) {
   };
 
   return (
-    <header className="h-20 bg-[#FFFAFC]/95 backdrop-blur-md border-b border-[#EBD8E1] sticky top-0 z-30 px-4 sm:px-8 flex items-center justify-between shrink-0">
+    <header className="h-[72px] bg-[#FFFAFC]/95 backdrop-blur-md border-b border-[#EBD8E1] sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between shrink-0">
       {/* Left: Mobile trigger & Page Title */}
       <div className="flex items-center gap-3 min-w-0">
         {onOpenMobileMenu && (
@@ -129,6 +144,15 @@ export function TopNav({ onOpenMobileMenu }: TopNavProps) {
             NPT
           </span>
         </div>
+
+        {/* Quick Action */}
+        <Link
+          href="/calendar"
+          className="hidden lg:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#3D084B] text-white text-xs font-semibold hover:bg-[#521363] active:scale-[0.98] transition-all shadow-subtle"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>New Booking</span>
+        </Link>
 
         {/* User Profile Menu Dropdown */}
         <div className="relative border-l border-[#EBD8E1] pl-3 sm:pl-5" ref={dropdownRef}>

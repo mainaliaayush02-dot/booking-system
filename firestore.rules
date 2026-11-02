@@ -84,16 +84,46 @@ service cloud.firestore {
     // Payments collection - strictly protected financial records
     match /payments/{paymentId} {
       allow read: if isStaffOrAdmin();
-      allow create: if isStaffOrAdmin();
-      allow update: if isAdmin();
+      allow create: if isStaffOrAdmin() && 
+        request.resource.data.amount > 0 &&
+        request.resource.data.recordedByUid == request.auth.uid &&
+        request.resource.data.receiptNumber.matches('^REC-[0-9]{4}-[0-9]{4,}$');
+      
+      // Updates strictly restricted to audited reversals
+      allow update: if isStaffOrAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isReversed', 'reversalReason', 'reversedAt', 'reversedByUid', 'reversedByName']) &&
+        request.resource.data.isReversed == true &&
+        request.resource.data.reversalReason is string &&
+        request.resource.data.reversalReason.size() > 0;
+
       allow delete: if false; // Strict: Never silently delete financial records!
     }
 
     // Studio expenses collection
     match /expenses/{expenseId} {
       allow read: if isStaffOrAdmin();
-      allow create, update: if isStaffOrAdmin();
-      allow delete: if isAdmin();
+      allow create: if isStaffOrAdmin() &&
+        request.resource.data.amount > 0 &&
+        request.resource.data.recordedByUid == request.auth.uid;
+
+      // Updates can modify details or reversal, but cannot tamper with creation attribution or original id
+      allow update: if isStaffOrAdmin() &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['id', 'createdAt', 'recordedByUid']);
+
+      allow delete: if false; // Strict: Never silently delete financial records!
+    }
+
+    // Concurrency sequence counters (e.g. receipts REC-YYYY-XXXX)
+    match /counters/{counterId} {
+      allow read: if isStaffOrAdmin();
+      // On create, initial sequence must start at 1
+      allow create: if isStaffOrAdmin() && request.resource.data.lastSeq == 1;
+      // On update, sequence must strictly be an atomic increment of exactly 1
+      allow update: if isStaffOrAdmin() && (
+        !('lastSeq' in resource.data) ||
+        request.resource.data.lastSeq == resource.data.lastSeq + 1
+      );
+      allow delete: if false; // Strict: Never delete sequence counters
     }
 
     // Activity audit logs - append-only trail

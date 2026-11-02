@@ -60,32 +60,32 @@ export default function SettingsPage() {
 
   return (
     <StudioLayout>
-      <div className="space-y-6">
-        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-6 rounded-2xl shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
+      <div className="space-y-6 sm:space-y-8 pb-12">
+        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-6 sm:p-7 rounded-3xl shadow-studio flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
               <Settings className="w-5 h-5 text-[#3D084B]" />
-              <h2 className="font-serif text-2xl font-bold text-[#3D084B]">
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#3D084B] tracking-tight">
                 Studio Settings & Configuration
               </h2>
             </div>
-            <p className="text-sm text-[#846F7F] mt-1">
+            <p className="text-xs sm:text-sm text-[#846F7F] mt-1 font-normal leading-relaxed">
               Internal studio metadata, timezone defaults, team access, and Firebase status.
             </p>
           </div>
-          <span className="text-xs font-mono font-bold text-[#3D084B] bg-[#FAF2F7] border border-[#EBD8E1] px-3.5 py-1.5 rounded-full">
+          <span className="text-xs font-mono font-bold text-[#3D084B] bg-[#FAF2F7] border border-[#EBD8E1] px-4 py-1.5 rounded-full w-fit">
             v1.0.0 Production
           </span>
         </div>
 
         {/* Studio System Parameters */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-5 flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] shrink-0">
+          <Card className="p-5 flex items-start gap-4 hover:border-[#D6A3C7] transition-all hover:shadow-subtle">
+            <div className="w-10 h-10 rounded-2xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] shrink-0 shadow-subtle">
               <Building className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] text-[#846F7F] font-bold uppercase tracking-wider">Studio Brand</p>
+              <p className="text-[10px] text-[#846F7F] font-bold uppercase tracking-wider">Studio Brand</p>
               <h4 className="text-sm font-bold text-[#332A34] mt-0.5">
                 Newborn Photography Nepal
               </h4>
@@ -93,12 +93,12 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          <Card className="p-5 flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] shrink-0">
+          <Card className="p-5 flex items-start gap-4 hover:border-[#D6A3C7] transition-all hover:shadow-subtle">
+            <div className="w-10 h-10 rounded-2xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] shrink-0 shadow-subtle">
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] text-[#846F7F] font-bold uppercase tracking-wider">System Timezone</p>
+              <p className="text-[10px] text-[#846F7F] font-bold uppercase tracking-wider">System Timezone</p>
               <h4 className="text-sm font-bold text-[#332A34] mt-0.5">
                 Asia/Kathmandu (NPT)
               </h4>
@@ -106,12 +106,12 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          <Card className="p-5 flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] shrink-0">
+          <Card className="p-5 flex items-start gap-4 hover:border-[#D6A3C7] transition-all hover:shadow-subtle">
+            <div className="w-10 h-10 rounded-2xl bg-[#FAF2F7] border border-[#EBD8E1] flex items-center justify-center text-[#3D084B] shrink-0 shadow-subtle">
               <Coins className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[11px] text-[#846F7F] font-bold uppercase tracking-wider">Studio Currency</p>
+              <p className="text-[10px] text-[#846F7F] font-bold uppercase tracking-wider">Studio Currency</p>
               <h4 className="text-sm font-bold text-[#332A34] mt-0.5">
                 NPR (Nepalese Rupee)
               </h4>

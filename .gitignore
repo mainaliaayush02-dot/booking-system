@@ -10,8 +10,22 @@ node_modules/
 .pnp.js
 
 # Environment variables
-.env*.local
 .env
+.env.local
+.env.*.local
+.env*.local
+
+# Firebase service account keys and credentials
+*serviceAccount*.json
+*firebase-admin*.json
+*-key.json
+
+# TypeScript build info cache
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Verification screenshots
+screenshots/
 
 # Debug logs
 npm-debug.log*
