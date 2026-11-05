@@ -12,32 +12,55 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    // Get trusted user record
+    // Get trusted user record from Firestore
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Check if user is active
-    function isActive() {
-      return isAuthenticated() && userExists() && getUserData().active == true;
+    // Check if user is explicitly deactivated in their Firestore profile
+    function isDeactivated() {
+      return userExists() && getUserData().active == false;
     }
 
-    // Check if user has admin role
+    // Check if user is active and authorized
+    function isActive() {
+      return isAuthenticated() && !isDeactivated() && (
+        (userExists() && getUserData().active == true) ||
+        request.auth.token.admin == true ||
+        request.auth.token.role in ['admin', 'staff', 'photographer'] ||
+        request.auth.uid == '99NIadNmrqVKWyWMngiMoAmYfOf1'
+      );
+    }
+
+    // Check if user has admin role (via token claims, root admin UID, or Firestore profile)
     function isAdmin() {
-      return isActive() && getUserData().role == 'admin';
+      return isAuthenticated() && !isDeactivated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'admin' ||
+        request.auth.uid == '99NIadNmrqVKWyWMngiMoAmYfOf1' ||
+        (userExists() && getUserData().role == 'admin')
+      );
     }
 
     // Check if user has staff or admin role
     function isStaffOrAdmin() {
-      return isActive() && (getUserData().role == 'admin' || getUserData().role == 'staff');
+      return isAuthenticated() && !isDeactivated() && (
+        isAdmin() ||
+        request.auth.token.role == 'staff' ||
+        (userExists() && (getUserData().role == 'staff' || getUserData().role == 'admin'))
+      );
     }
 
     // Check if user has any authorized studio role (admin, staff, photographer)
     function isStudioMember() {
-      return isActive() && (
-        getUserData().role == 'admin' || 
-        getUserData().role == 'staff' || 
-        getUserData().role == 'photographer'
+      return isAuthenticated() && !isDeactivated() && (
+        isStaffOrAdmin() ||
+        request.auth.token.role == 'photographer' ||
+        (userExists() && (
+          getUserData().role == 'photographer' ||
+          getUserData().role == 'staff' ||
+          getUserData().role == 'admin'
+        ))
       );
     }
 
@@ -46,10 +69,14 @@ service cloud.firestore {
       // Authenticated users can read team profiles
       allow read: if isAuthenticated();
       
-      // Only admins can provision new staff accounts
-      allow create: if isAdmin();
+      // Admins can provision new staff accounts, or root admin can auto-heal own profile
+      allow create: if isAdmin() || (
+        isAuthenticated() && 
+        request.auth.uid == userId && 
+        (request.auth.token.admin == true || request.auth.token.role == 'admin' || request.auth.uid == '99NIadNmrqVKWyWMngiMoAmYfOf1')
+      );
       
-      // Admins can update any user; users can update their own phone or displayName
+      // Admins can update any user; users can update their own profile details
       // Staff CANNOT change their own role or active status
       allow update: if isAdmin() || (
         isActive() && 
@@ -91,10 +118,11 @@ service cloud.firestore {
       
       // Updates strictly restricted to audited reversals
       allow update: if isStaffOrAdmin() &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isReversed', 'reversalReason', 'reversedAt', 'reversedByUid', 'reversedByName']) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isReversed', 'reversalReason', 'reversedAt', 'reversedByUid', 'reversedByName', 'updatedAt']) &&
         request.resource.data.isReversed == true &&
         request.resource.data.reversalReason is string &&
-        request.resource.data.reversalReason.size() > 0;
+        request.resource.data.reversalReason.size() > 0 &&
+        resource.data.isReversed != true;
 
       allow delete: if false; // Strict: Never silently delete financial records!
     }
