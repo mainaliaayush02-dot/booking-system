@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --experimental-strip-types scripts/test-phase4-reports.mjs && node --experimental-strip-types scripts/test-phase3-final-acceptance.mjs"
+    "test": "node scripts/test-delete-package.mjs && node --experimental-strip-types scripts/test-phase4-reports.mjs && node --experimental-strip-types scripts/test-phase3-final-acceptance.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

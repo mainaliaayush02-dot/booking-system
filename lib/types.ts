@@ -66,6 +66,10 @@ export interface PhotographyPackage {
   description?: string;
   internalNotes?: string;
   active: boolean;
+  isDeleted?: boolean;
+  deletedAt?: string;
+  deletedByUid?: string;
+  deletedByName?: string;
   createdAt: string;
   updatedAt: string;
 }

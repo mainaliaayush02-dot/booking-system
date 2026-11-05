@@ -6,6 +6,7 @@ import {
   setDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -189,7 +190,9 @@ export async function getPackages(includeInactive = true): Promise<PhotographyPa
     );
   }
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<PhotographyPackage, "id">) }));
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Omit<PhotographyPackage, "id">) }))
+    .filter((pkg) => pkg.isDeleted !== true);
 }
 
 export async function createPackage(
@@ -260,6 +263,132 @@ export async function togglePackageActive(
     id,
     `${active ? "Activated" : "Deactivated"} package ${packageName}`
   );
+}
+
+/**
+ * Inspect whether a package is referenced by any bookings in Firestore
+ */
+export async function checkPackageUsage(
+  packageId: string,
+  packageName?: string
+): Promise<{
+  isReferenced: boolean;
+  bookingCount: number;
+  sampleBookingNumbers: string[];
+}> {
+  const bookingsRef = collection(db, "bookings");
+  const bookingsMap = new Map<string, string>(); // bookingId -> bookingNumber
+
+  try {
+    const idQuery = query(bookingsRef, where("packageId", "==", packageId));
+    const idSnap = await getDocs(idQuery);
+    idSnap.docs.forEach((docSnap) => {
+      const data = docSnap.data() as Booking;
+      bookingsMap.set(docSnap.id, data.bookingNumber || docSnap.id);
+    });
+  } catch (err) {
+    console.warn("Could not query bookings by packageId:", err);
+  }
+
+  if (packageName) {
+    try {
+      const nameQuery = query(bookingsRef, where("packageName", "==", packageName));
+      const nameSnap = await getDocs(nameQuery);
+      nameSnap.docs.forEach((docSnap) => {
+        const data = docSnap.data() as Booking;
+        bookingsMap.set(docSnap.id, data.bookingNumber || docSnap.id);
+      });
+    } catch (err) {
+      console.warn("Could not query bookings by packageName:", err);
+    }
+  }
+
+  return {
+    isReferenced: bookingsMap.size > 0,
+    bookingCount: bookingsMap.size,
+    sampleBookingNumbers: Array.from(bookingsMap.values()).slice(0, 3),
+  };
+}
+
+/**
+ * Delete a photography package with safety checks and RBAC:
+ * - Admin authorization strictly required.
+ * - If package is referenced by historical bookings, safe soft-delete/archive preserves data integrity.
+ * - If package is unreferenced, safely removed.
+ * - Deletion logged in activity_logs audit trail.
+ */
+export async function deletePackage(
+  packageId: string,
+  user: { uid: string; displayName: string; role?: string }
+): Promise<{
+  success: boolean;
+  softDeleted: boolean;
+  packageName: string;
+  bookingCount: number;
+}> {
+  if (user.role !== "admin") {
+    throw new Error("Unauthorized: Only studio administrators can delete photography packages.");
+  }
+
+  const pkgRef = doc(db, "packages", packageId);
+  const pkgSnap = await getDoc(pkgRef);
+  if (!pkgSnap.exists()) {
+    throw new Error("Photography package not found.");
+  }
+
+  const pkgData = pkgSnap.data() as PhotographyPackage;
+  const packageName = pkgData.name || "Photography Package";
+
+  // Check if historical bookings reference this package
+  const usage = await checkPackageUsage(packageId, packageName);
+  const now = new Date().toISOString();
+
+  if (usage.isReferenced) {
+    // Soft-delete / Archive safely: Preserves booking history, receipts & financial audit records
+    await updateDoc(pkgRef, {
+      isDeleted: true,
+      active: false,
+      deletedAt: now,
+      deletedByUid: user.uid,
+      deletedByName: user.displayName,
+      updatedAt: now,
+    });
+
+    await logActivity(
+      user.uid,
+      user.displayName,
+      "DELETED_PACKAGE",
+      "package",
+      packageId,
+      `Safely archived package "${packageName}" (${usage.bookingCount} historical booking${usage.bookingCount === 1 ? "" : "s"} preserved)`
+    );
+
+    return {
+      success: true,
+      softDeleted: true,
+      packageName,
+      bookingCount: usage.bookingCount,
+    };
+  } else {
+    // Permanently remove unreferenced package document
+    await deleteDoc(pkgRef);
+
+    await logActivity(
+      user.uid,
+      user.displayName,
+      "DELETED_PACKAGE",
+      "package",
+      packageId,
+      `Permanently deleted unreferenced package "${packageName}"`
+    );
+
+    return {
+      success: true,
+      softDeleted: false,
+      packageName,
+      bookingCount: 0,
+    };
+  }
 }
 
 // Seed the 3 standard studio pricing tiers if database has 0 packages

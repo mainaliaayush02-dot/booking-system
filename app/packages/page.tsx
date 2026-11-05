@@ -15,12 +15,17 @@ import {
   Camera,
   Image as ImageIcon,
   Users,
+  Trash2,
+  AlertCircle,
+  CheckCircle,
+  X,
 } from "lucide-react";
 import {
   getPackages,
   createPackage,
   updatePackage,
   togglePackageActive,
+  deletePackage,
   seedStandardPackages,
 } from "@/lib/firestore";
 import { PhotographyPackage, PackageCategory } from "@/lib/types";
@@ -29,6 +34,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PackageModal } from "@/components/packages/package-modal";
 import { useAuth } from "@/lib/firebase-auth";
 
@@ -43,7 +49,7 @@ const CATEGORIES = [
 ];
 
 export default function PackagesPage() {
-  const { studioUser } = useAuth();
+  const { studioUser, isAdmin } = useAuth();
   const [packages, setPackages] = useState<PhotographyPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -53,6 +59,11 @@ export default function PackagesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<PhotographyPackage | null>(null);
   const [seedingTemplates, setSeedingTemplates] = useState(false);
+
+  // Deletion state
+  const [packageToDelete, setPackageToDelete] = useState<PhotographyPackage | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const loadPackages = async () => {
     try {
@@ -95,6 +106,47 @@ export default function PackagesPage() {
       displayName: studioUser.displayName,
     });
     await loadPackages();
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!packageToDelete || !studioUser) return;
+    if (!isAdmin) {
+      setFeedback({
+        type: "error",
+        message: "Unauthorized: Only studio administrators can delete packages.",
+      });
+      setPackageToDelete(null);
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      const result = await deletePackage(packageToDelete.id, {
+        uid: studioUser.uid,
+        displayName: studioUser.displayName,
+        role: studioUser.role,
+      });
+
+      setFeedback({
+        type: "success",
+        message: result.softDeleted
+          ? `Package "${result.packageName}" was safely archived because it is referenced in ${result.bookingCount} historical booking(s). Historical bookings, receipts and financial reports remain completely preserved.`
+          : `Package "${result.packageName}" has been permanently deleted.`,
+      });
+
+      setPackageToDelete(null);
+      setIsModalOpen(false);
+      setEditingPackage(null);
+      await loadPackages();
+    } catch (err: any) {
+      console.error("Error deleting package:", err);
+      setFeedback({
+        type: "error",
+        message: err?.message || "Failed to delete package. Please try again.",
+      });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleSeedTemplates = async () => {
@@ -175,6 +227,33 @@ export default function PackagesPage() {
             </Button>
           </div>
         </div>
+
+        {/* Feedback Alert */}
+        {feedback && (
+          <div
+            className={`p-4 rounded-2xl flex items-center justify-between border text-xs font-medium transition-all ${
+              feedback.type === "success"
+                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                : "bg-rose-50 border-rose-200 text-rose-800"
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              {feedback.type === "success" ? (
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              )}
+              <span className="leading-relaxed">{feedback.message}</span>
+            </div>
+            <button
+              onClick={() => setFeedback(null)}
+              className="text-current opacity-70 hover:opacity-100 p-1 cursor-pointer shrink-0 ml-3"
+              aria-label="Dismiss message"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Filter & Search Bar */}
         <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-4 sm:p-5 rounded-3xl shadow-subtle flex flex-col lg:flex-row items-center gap-4 justify-between">
@@ -363,7 +442,7 @@ export default function PackagesPage() {
                         setEditingPackage(pkg);
                         setIsModalOpen(true);
                       }}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#FAF2F7] hover:bg-[#F5E5EB] text-[#3D084B] font-semibold transition-colors border border-[#EBD8E1]"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#FAF2F7] hover:bg-[#F5E5EB] text-[#3D084B] font-semibold transition-colors border border-[#EBD8E1] cursor-pointer"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                       <span>Edit</span>
@@ -371,7 +450,7 @@ export default function PackagesPage() {
                     <button
                       onClick={() => handleToggleActive(pkg)}
                       title={pkg.active ? "Deactivate package" : "Activate package"}
-                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-colors border ${
+                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-colors border cursor-pointer ${
                         pkg.active
                           ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200"
                           : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200"
@@ -380,6 +459,16 @@ export default function PackagesPage() {
                       <Power className="w-3.5 h-3.5" />
                       <span>{pkg.active ? "Deactivate" : "Activate"}</span>
                     </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => setPackageToDelete(pkg)}
+                        title="Delete package"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-colors border bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -393,6 +482,26 @@ export default function PackagesPage() {
           onClose={() => setIsModalOpen(false)}
           onSave={handleSavePackage}
           initialPackage={editingPackage}
+          isAdmin={isAdmin}
+          onDelete={(pkg) => {
+            setIsModalOpen(false);
+            setPackageToDelete(pkg);
+          }}
+        />
+
+        {/* Delete Package Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={Boolean(packageToDelete)}
+          onClose={() => {
+            if (!deleting) setPackageToDelete(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          title="Delete Package?"
+          description="Are you sure you want to delete this package? This action cannot be undone."
+          confirmLabel="Delete Package"
+          cancelLabel="Cancel"
+          variant="danger"
+          isLoading={deleting}
         />
       </div>
     </StudioLayout>

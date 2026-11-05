@@ -11,6 +11,8 @@ interface PackageModalProps {
   onClose: () => void;
   onSave: (pkgData: Omit<PhotographyPackage, "id" | "createdAt" | "updatedAt">) => Promise<void>;
   initialPackage?: PhotographyPackage | null;
+  isAdmin?: boolean;
+  onDelete?: (pkg: PhotographyPackage) => void;
 }
 
 const CATEGORIES: PackageCategory[] = [
@@ -28,6 +30,8 @@ export function PackageModal({
   onClose,
   onSave,
   initialPackage,
+  isAdmin = false,
+  onDelete,
 }: PackageModalProps) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState<PackageCategory>("Newborn Photography");
@@ -413,13 +417,31 @@ export function PackageModal({
         </div>
 
         {/* Sticky Actions */}
-        <div className="pt-4 border-t border-[#EBD8E1] flex items-center justify-end gap-3 sticky bottom-0 bg-[#FFFAFC] py-3.5 -mb-6 -mx-6 px-6 mt-6 shadow-card">
-          <Button type="button" variant="outline" onClick={onClose} disabled={submitting} className="cursor-pointer">
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" isLoading={submitting} className="cursor-pointer shadow-subtle">
-            {initialPackage ? "Save Changes" : "Create Package"}
-          </Button>
+        <div className="pt-4 border-t border-[#EBD8E1] flex items-center justify-between gap-3 sticky bottom-0 bg-[#FFFAFC] py-3.5 -mb-6 -mx-6 px-6 mt-6 shadow-card">
+          {initialPackage && onDelete && isAdmin ? (
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              onClick={() => onDelete(initialPackage)}
+              disabled={submitting}
+              className="gap-1.5 cursor-pointer text-xs"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Package</span>
+            </Button>
+          ) : (
+            <div />
+          )}
+
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting} className="cursor-pointer">
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" isLoading={submitting} className="cursor-pointer shadow-subtle">
+              {initialPackage ? "Save Changes" : "Create Package"}
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

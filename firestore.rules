@@ -98,7 +98,12 @@ service cloud.firestore {
     // Photography packages collection
     match /packages/{packageId} {
       allow read: if isStudioMember();
-      allow write: if isStaffOrAdmin();
+      allow create: if isStaffOrAdmin();
+      allow update: if isStaffOrAdmin() && (
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isDeleted', 'deletedAt', 'deletedByUid', 'deletedByName']) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
     }
 
     // Bookings collection
