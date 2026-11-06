@@ -1075,10 +1075,10 @@ export default function ReportsPage() {
                           </td>
                           <td className="py-3.5 px-4 text-center">
                             <Link
-                              href={`/clients?search=${encodeURIComponent(c.clientName)}`}
+                              href={`/sessions?search=${encodeURIComponent(c.clientName)}`}
                               className="text-[11px] text-[#3D084B] font-semibold hover:underline inline-flex items-center gap-1"
                             >
-                              <span>View Profile</span>
+                              <span>View Sessions</span>
                               <ChevronRight className="w-3 h-3" />
                             </Link>
                           </td>

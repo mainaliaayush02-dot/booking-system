@@ -46,10 +46,6 @@ const PAGE_METADATA: Record<string, { title: string; subtitle: string }> = {
     title: "Trash & Archive",
     subtitle: "Safely archived photography packages & cancelled records",
   },
-  "/clients": {
-    title: "Client Directory",
-    subtitle: "Family profiles, baby milestones & previous sessions",
-  },
   "/packages": {
     title: "Photography Packages",
     subtitle: "Studio pricing collections, durations & package inclusions",

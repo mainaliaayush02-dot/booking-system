@@ -29,6 +29,7 @@ export interface Client {
   phone: string;
   secondaryPhone?: string;
   email?: string;
+  source?: 'Ads' | 'Instagram' | 'Facebook' | 'Referral' | 'Walk-in' | 'Other' | string;
   address?: string;
   babyName?: string;
   babyDob?: string; // YYYY-MM-DD
@@ -90,6 +91,15 @@ export interface PackageSnapshot {
   familyPortraitsIncluded?: boolean;
 }
 
+export interface DeliverablesChecklist {
+  rawPhotos50Plus?: boolean;
+  editedPhotos5?: boolean;
+  setup1?: boolean;
+  outfits2?: boolean;
+  familyPortrait?: boolean;
+  albumAndFrame?: boolean;
+}
+
 export interface Booking {
   id: string;
   bookingNumber: string; // e.g. NPN-2026-0001
@@ -97,6 +107,7 @@ export interface Booking {
   clientName: string;
   clientPhone: string;
   clientEmail?: string;
+  clientSource?: string;
   babyName?: string;
   babyDob?: string;
   category: PackageCategory;
@@ -111,14 +122,22 @@ export interface Booking {
   advancePaid: number; // Sum of paid advance payments
   remainingBalance: number; // (totalAmount - advancePaid)
   paymentStatus?: PaymentStatus;
+  paymentType?: 'full' | 'split';
+  depositAmount?: number;
+  deliveryDays?: number;
+  deliveryDeadline?: string;
+  deliveryDate?: string;
+  delivered?: boolean;
+  deliveredAt?: string;
+  deliveryNotes?: string;
+  deliverablesChecklist?: DeliverablesChecklist;
+  albumIncluded?: boolean;
+  frameIncluded?: boolean;
   appointmentDate: string; // YYYY-MM-DD (Asia/Kathmandu)
   startTime: string; // HH:mm (24-hour format)
   endTime: string; // HH:mm (24-hour format)
   durationMinutes: number;
   status: BookingStatus;
-  delivered?: boolean;
-  deliveredAt?: string;
-  deliveryNotes?: string;
   location?: 'studio' | 'home' | 'outdoor';
   photographerName?: string;
   specialInstructions?: string;

@@ -31,6 +31,7 @@ import {
   StudioUser,
   Lead,
   FollowUp,
+  DeliverablesChecklist,
 } from "./types";
 import { getTodayNepal } from "./utils";
 import {
@@ -176,6 +177,80 @@ export async function updateClient(
     id,
     `Updated client details for ${clientData.fullName || id}`
   );
+}
+
+/**
+ * Find existing client by phone number or create new client.
+ * Strictly prevents creating duplicate client profiles for the same phone number.
+ */
+export async function getOrCreateClientByPhone(
+  data: {
+    fullName: string;
+    phone: string;
+    email?: string;
+    source?: string;
+    babyDob?: string;
+    babyName?: string;
+  },
+  user: { uid: string; displayName: string }
+): Promise<Client> {
+  const cleanPhone = data.phone.trim();
+  const existingQ = query(collection(db, "clients"), where("phone", "==", cleanPhone));
+  const existingSnap = await getDocs(existingQ);
+  const now = new Date().toISOString();
+
+  if (!existingSnap.empty) {
+    const docSnap = existingSnap.docs[0];
+    const existing = { id: docSnap.id, ...(docSnap.data() as Omit<Client, "id">) };
+
+    const updates: Partial<Client> = {
+      fullName: data.fullName.trim() || existing.fullName,
+      email: data.email !== undefined ? data.email.trim() : existing.email,
+      source: data.source || existing.source || "Other",
+      babyDob: data.babyDob || existing.babyDob || "",
+      babyName: data.babyName || existing.babyName || "",
+      updatedAt: now,
+    };
+    await updateDoc(doc(db, "clients", existing.id), updates);
+    return { ...existing, ...updates };
+  }
+
+  // Create new client record in Firestore
+  const newClientData = {
+    fullName: data.fullName.trim(),
+    phone: cleanPhone,
+    email: data.email?.trim() || "",
+    source: data.source || "Other",
+    babyName: data.babyName || "",
+    babyDob: data.babyDob || "",
+    totalBookings: 0,
+    totalSpent: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const docRef = await addDoc(collection(db, "clients"), newClientData);
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "CREATED_CLIENT",
+    "client",
+    docRef.id,
+    `Registered client ${data.fullName.trim()} (Phone: ${cleanPhone})`
+  );
+  return { id: docRef.id, ...newClientData };
+}
+
+/**
+ * Fetch all active non-reversed payments recorded for a booking.
+ */
+export async function getPaymentsForBooking(bookingId: string): Promise<Payment[]> {
+  const q = query(
+    collection(db, "payments"),
+    where("bookingId", "==", bookingId),
+    where("isReversed", "==", false)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) })) as Payment[];
 }
 
 // ----------------------------------------------------------------------
@@ -565,6 +640,7 @@ export async function createBooking(
     clientName: string;
     clientPhone: string;
     clientEmail?: string;
+    clientSource?: string;
     babyName?: string;
     babyDob?: string;
     category: string;
@@ -573,8 +649,20 @@ export async function createBooking(
     packagePriceSnapshot: number;
     packageSnapshot?: PackageSnapshot;
     customAgreedPrice?: number;
-    discountAmount: number;
+    discountAmount?: number;
     discountReason?: string;
+    totalAmount?: number;
+    paymentType?: 'full' | 'split';
+    depositAmount?: number;
+    deliveryDays?: number;
+    deliveryDeadline?: string;
+    deliveryDate?: string;
+    delivered?: boolean;
+    deliveredAt?: string;
+    deliveryNotes?: string;
+    deliverablesChecklist?: DeliverablesChecklist;
+    albumIncluded?: boolean;
+    frameIncluded?: boolean;
     appointmentDate: string;
     startTime: string;
     endTime: string;
@@ -599,7 +687,7 @@ export async function createBooking(
 
   const bookingNumber = await generateBookingNumber();
   const agreedPrice = data.customAgreedPrice !== undefined ? data.customAgreedPrice : data.packagePriceSnapshot;
-  const totalAmount = Math.max(0, agreedPrice - (data.discountAmount || 0));
+  const computedTotal = data.totalAmount !== undefined ? data.totalAmount : Math.max(0, agreedPrice - (data.discountAmount || 0));
   const now = new Date().toISOString();
 
   const newBooking: Omit<Booking, "id"> = {
@@ -608,6 +696,7 @@ export async function createBooking(
     clientName: data.clientName,
     clientPhone: data.clientPhone,
     clientEmail: data.clientEmail || "",
+    clientSource: data.clientSource || "Other",
     babyName: data.babyName || "",
     babyDob: data.babyDob || "",
     category: data.category,
@@ -623,10 +712,21 @@ export async function createBooking(
     customAgreedPrice: data.customAgreedPrice,
     discountAmount: data.discountAmount || 0,
     discountReason: data.discountReason || "",
-    totalAmount,
+    totalAmount: computedTotal,
     advancePaid: 0,
-    remainingBalance: totalAmount,
+    remainingBalance: computedTotal,
     paymentStatus: "unpaid",
+    paymentType: data.paymentType || "full",
+    depositAmount: data.depositAmount || 0,
+    deliveryDays: data.deliveryDays,
+    deliveryDeadline: data.deliveryDeadline,
+    deliveryDate: data.deliveryDate,
+    delivered: Boolean(data.delivered),
+    deliveredAt: data.delivered ? now : undefined,
+    deliveryNotes: data.deliveryNotes || "",
+    deliverablesChecklist: data.deliverablesChecklist,
+    albumIncluded: Boolean(data.albumIncluded),
+    frameIncluded: Boolean(data.frameIncluded),
     appointmentDate: data.appointmentDate,
     startTime: data.startTime,
     endTime: data.endTime,
@@ -652,7 +752,7 @@ export async function createBooking(
       const cData = clientSnap.data();
       await updateDoc(clientRef, {
         totalBookings: (cData.totalBookings || 0) + 1,
-        totalSpent: (cData.totalSpent || 0) + totalAmount,
+        totalSpent: (cData.totalSpent || 0) + computedTotal,
         updatedAt: now,
       });
     }

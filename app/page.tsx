@@ -564,13 +564,6 @@ export default function DashboardPage() {
                   Parents registered for photography consultations and bookings.
                 </CardDescription>
               </div>
-              <Link
-                href="/clients"
-                className="text-xs font-semibold text-[#3D084B] hover:text-[#68456E] flex items-center gap-1 shrink-0 transition-colors"
-              >
-                <span>Client Directory</span>
-                <ArrowUpRight className="w-3.5 h-3.5" />
-              </Link>
             </CardHeader>
             <CardContent>
               {loading ? (

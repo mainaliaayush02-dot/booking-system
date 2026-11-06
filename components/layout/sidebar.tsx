@@ -15,7 +15,6 @@ import {
   Receipt,
   BarChart3,
   Settings,
-  Contact,
   X,
   LogOut,
   ChevronDown,
@@ -40,7 +39,6 @@ const primaryNavItems = [
 
 // Extended Studio Management items
 const studioNavItems = [
-  { name: "Clients", href: "/clients", icon: Contact },
   { name: "Packages", href: "/packages", icon: Package },
   { name: "Finance", href: "/finance", icon: Receipt },
   { name: "Reports", href: "/reports", icon: BarChart3 },
