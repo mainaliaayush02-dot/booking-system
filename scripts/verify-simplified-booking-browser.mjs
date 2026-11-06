@@ -178,3 +178,4 @@ runBrowserChecks().catch((err) => {
   chromeProcess.kill();
   process.exit(1);
 });
+

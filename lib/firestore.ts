@@ -113,13 +113,23 @@ export async function getClientById(id: string): Promise<Client | null> {
 }
 
 export async function getClientBookings(clientId: string): Promise<Booking[]> {
-  const q = query(
-    collection(db, "bookings"),
-    where("clientId", "==", clientId),
-    orderBy("appointmentDate", "desc")
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }));
+  try {
+    const q = query(
+      collection(db, "bookings"),
+      where("clientId", "==", clientId)
+    );
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
+      .sort((a, b) => (b.appointmentDate || "").localeCompare(a.appointmentDate || ""));
+  } catch (err: any) {
+    console.warn("getClientBookings query warning:", err?.message || err);
+    const snap = await getDocs(collection(db, "bookings"));
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
+      .filter((b) => b.clientId === clientId)
+      .sort((a, b) => (b.appointmentDate || "").localeCompare(a.appointmentDate || ""));
+  }
 }
 
 export async function createClient(
@@ -244,33 +254,67 @@ export async function getOrCreateClientByPhone(
  * Fetch all active non-reversed payments recorded for a booking.
  */
 export async function getPaymentsForBooking(bookingId: string): Promise<Payment[]> {
-  const q = query(
-    collection(db, "payments"),
-    where("bookingId", "==", bookingId),
-    where("isReversed", "==", false)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) })) as Payment[];
+  try {
+    const q = query(
+      collection(db, "payments"),
+      where("bookingId", "==", bookingId)
+    );
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) }))
+      .filter((p) => p.isReversed !== true) as Payment[];
+  } catch (err: any) {
+    console.warn("getPaymentsForBooking query warning:", err?.message || err);
+    const snap = await getDocs(collection(db, "payments"));
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) }))
+      .filter((p) => p.bookingId === bookingId && p.isReversed !== true) as Payment[];
+  }
 }
 
 // ----------------------------------------------------------------------
 // PACKAGE MANAGEMENT
 // ----------------------------------------------------------------------
 export async function getPackages(includeInactive = true): Promise<PhotographyPackage[]> {
-  let q;
-  if (includeInactive) {
-    q = query(collection(db, "packages"), orderBy("price", "asc"));
-  } else {
-    q = query(
-      collection(db, "packages"),
-      where("active", "==", true),
-      orderBy("price", "asc")
-    );
+  try {
+    let q;
+    if (includeInactive) {
+      q = query(collection(db, "packages"), orderBy("price", "asc"));
+    } else {
+      q = query(
+        collection(db, "packages"),
+        where("active", "==", true),
+        orderBy("price", "asc")
+      );
+    }
+    const snapshot = await getDocs(q);
+    return snapshot.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<PhotographyPackage, "id">) }))
+      .filter((pkg) => pkg.isDeleted !== true);
+  } catch (err: any) {
+    console.warn("getPackages primary query warning, falling back to index-safe query:", err?.message || err);
+    try {
+      const fallbackQ = query(collection(db, "packages"), orderBy("price", "asc"));
+      const snapshot = await getDocs(fallbackQ);
+      return snapshot.docs
+        .map((d) => ({ id: d.id, ...(d.data() as Omit<PhotographyPackage, "id">) }))
+        .filter((pkg) => {
+          if (pkg.isDeleted === true) return false;
+          if (!includeInactive && pkg.active === false) return false;
+          return true;
+        });
+    } catch {
+      const snapshot = await getDocs(collection(db, "packages"));
+      return snapshot.docs
+        .map((d) => ({ id: d.id, ...(d.data() as Omit<PhotographyPackage, "id">) }))
+        .filter((pkg) => {
+          if (pkg.isDeleted === true) return false;
+          if (!includeInactive && pkg.active === false) return false;
+          return true;
+        })
+        .sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+    }
   }
-  const snapshot = await getDocs(q);
-  return snapshot.docs
-    .map((d) => ({ id: d.id, ...(d.data() as Omit<PhotographyPackage, "id">) }))
-    .filter((pkg) => pkg.isDeleted !== true);
 }
 
 export async function createPackage(
@@ -279,11 +323,14 @@ export async function createPackage(
 ): Promise<PhotographyPackage> {
   const col = collection(db, "packages");
   const now = new Date().toISOString();
-  const docRef = await addDoc(col, {
+  const safeData = {
     ...pkgData,
+    active: pkgData.active !== undefined ? Boolean(pkgData.active) : true,
+    isDeleted: false,
     createdAt: now,
     updatedAt: now,
-  });
+  };
+  const docRef = await addDoc(col, safeData);
 
   await logActivity(
     user.uid,
@@ -294,7 +341,7 @@ export async function createPackage(
     `Created photography package: ${pkgData.name} (NPR ${pkgData.price})`
   );
 
-  return { id: docRef.id, ...pkgData, createdAt: now, updatedAt: now };
+  return { id: docRef.id, ...safeData };
 }
 
 export async function updatePackage(
@@ -571,28 +618,48 @@ export async function getBookingsByDateRange(startDate: string, endDate: string)
 
 export async function getTodaySessions(): Promise<Booking[]> {
   const todayStr = getTodayNepal();
-  const q = query(
-    collection(db, "bookings"),
-    where("appointmentDate", "==", todayStr),
-    where("status", "!=", "cancelled")
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs
-    .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  try {
+    const q = query(
+      collection(db, "bookings"),
+      where("appointmentDate", "==", todayStr)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
+      .filter((b) => b.status !== "cancelled")
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  } catch (err: any) {
+    console.warn("getTodaySessions query warning:", err?.message || err);
+    const snapshot = await getDocs(collection(db, "bookings"));
+    return snapshot.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
+      .filter((b) => b.appointmentDate === todayStr && b.status !== "cancelled")
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }
 }
 
 export async function getUpcomingBookings(maxItems = 8): Promise<Booking[]> {
   const todayStr = getTodayNepal();
-  const q = query(
-    collection(db, "bookings"),
-    where("appointmentDate", ">=", todayStr),
-    where("status", "!=", "cancelled"),
-    orderBy("appointmentDate", "asc"),
-    limit(maxItems)
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }));
+  try {
+    const q = query(
+      collection(db, "bookings"),
+      where("appointmentDate", ">=", todayStr),
+      orderBy("appointmentDate", "asc")
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
+      .filter((b) => b.status !== "cancelled")
+      .slice(0, maxItems);
+  } catch (err: any) {
+    console.warn("getUpcomingBookings query warning:", err?.message || err);
+    const snapshot = await getDocs(collection(db, "bookings"));
+    return snapshot.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
+      .filter((b) => (b.appointmentDate || "") >= todayStr && b.status !== "cancelled")
+      .sort((a, b) => (a.appointmentDate || "").localeCompare(b.appointmentDate || ""))
+      .slice(0, maxItems);
+  }
 }
 
 // Conflict Detection: Overlap condition: (StartA < EndB) && (EndA > StartB)
@@ -602,17 +669,30 @@ export async function detectBookingConflicts(
   endTime: string,
   excludeBookingId?: string
 ): Promise<Booking[]> {
-  const q = query(
-    collection(db, "bookings"),
-    where("appointmentDate", "==", appointmentDate),
-    where("status", "!=", "cancelled")
-  );
-  const snapshot = await getDocs(q);
-  const existing = snapshot.docs
-    .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
-    .filter((b) => b.id !== excludeBookingId);
+  try {
+    const q = query(
+      collection(db, "bookings"),
+      where("appointmentDate", "==", appointmentDate)
+    );
+    const snapshot = await getDocs(q);
+    const existing = snapshot.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
+      .filter((b) => b.id !== excludeBookingId && b.status !== "cancelled");
 
-  return existing.filter((b) => startTime < b.endTime && endTime > b.startTime);
+    return existing.filter((b) => startTime < b.endTime && endTime > b.startTime);
+  } catch (err: any) {
+    console.warn("detectBookingConflicts query warning:", err?.message || err);
+    const snapshot = await getDocs(collection(db, "bookings"));
+    const existing = snapshot.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) }))
+      .filter(
+        (b) =>
+          b.appointmentDate === appointmentDate &&
+          b.id !== excludeBookingId &&
+          b.status !== "cancelled"
+      );
+    return existing.filter((b) => startTime < b.endTime && endTime > b.startTime);
+  }
 }
 
 // Format: NPN-YYYY-0001 (Sequential non-reusing booking identifier)
@@ -870,18 +950,38 @@ export async function cancelBooking(
 // PAYMENTS & EXPENSES (Reconciliation & preparation for Phase 3)
 // ----------------------------------------------------------------------
 export async function getPayments(bookingId?: string): Promise<Payment[]> {
-  let q;
-  if (bookingId) {
-    q = query(
-      collection(db, "payments"),
-      where("bookingId", "==", bookingId),
-      orderBy("paymentDate", "desc")
-    );
-  } else {
-    q = query(collection(db, "payments"), orderBy("paymentDate", "desc"));
+  try {
+    let q;
+    if (bookingId) {
+      q = query(
+        collection(db, "payments"),
+        where("bookingId", "==", bookingId),
+        orderBy("paymentDate", "desc")
+      );
+    } else {
+      q = query(collection(db, "payments"), orderBy("paymentDate", "desc"));
+    }
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) }));
+  } catch (err: any) {
+    console.warn("getPayments query warning, using index-safe fallback:", err?.message || err);
+    try {
+      if (bookingId) {
+        const q = query(collection(db, "payments"), where("bookingId", "==", bookingId));
+        const snapshot = await getDocs(q);
+        return snapshot.docs
+          .map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) }))
+          .sort((a, b) => (b.paymentDate || "").localeCompare(a.paymentDate || ""));
+      } else {
+        const snapshot = await getDocs(collection(db, "payments"));
+        return snapshot.docs
+          .map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) }))
+          .sort((a, b) => (b.paymentDate || "").localeCompare(a.paymentDate || ""));
+      }
+    } catch {
+      return [];
+    }
   }
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, "id">) }));
 }
 
 export async function getRecentPayments(maxItems = 5): Promise<Payment[]> {

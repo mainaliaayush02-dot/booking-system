@@ -53,9 +53,12 @@ interface BookingModalProps {
 const SESSION_TYPES: string[] = [
   "Newborn Photography",
   "Maternity Photography",
+  "Baby Photography",
   "Baby Milestone",
+  "Cake Smash Photography",
   "Cake Smash",
   "Family Photography",
+  "Couple Photography",
   "Other",
 ];
 
@@ -152,7 +155,16 @@ export function BookingModal({
     async function loadRefs() {
       try {
         setLoadingData(true);
-        const [cList, pList] = await Promise.all([getClients(), getPackages(false)]);
+        const [cList, pList] = await Promise.all([
+          getClients().catch((err) => {
+            console.error("Error loading clients:", err);
+            return [] as Client[];
+          }),
+          getPackages(false).catch((err) => {
+            console.error("Error loading packages:", err);
+            return [] as PhotographyPackage[];
+          }),
+        ]);
         setClients(cList);
         setPackages(pList);
       } catch (err) {
@@ -346,7 +358,23 @@ export function BookingModal({
     const selected = packages.find((p) => p.id === pkgId);
     if (selected) {
       setPackageName(selected.name);
-      setSessionType(selected.category);
+      if (selected.category) {
+        if (SESSION_TYPES.includes(selected.category)) {
+          setSessionType(selected.category);
+        } else if (selected.category.toLowerCase().includes("cake smash")) {
+          setSessionType("Cake Smash Photography");
+        } else if (selected.category.toLowerCase().includes("baby")) {
+          setSessionType("Baby Photography");
+        } else if (selected.category.toLowerCase().includes("newborn")) {
+          setSessionType("Newborn Photography");
+        } else if (selected.category.toLowerCase().includes("maternity")) {
+          setSessionType("Maternity Photography");
+        } else if (selected.category.toLowerCase().includes("family")) {
+          setSessionType("Family Photography");
+        } else {
+          setSessionType("Other");
+        }
+      }
       setTotalAmount(selected.price);
       if (selected.depositAmount && selected.depositAmount > 0) {
         setDepositAmount(selected.depositAmount);
@@ -734,9 +762,14 @@ export function BookingModal({
 
             {/* Package */}
             <div>
-              <label className="block text-xs font-bold text-[#252B38] mb-1">
-                Photography Package
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-[#252B38]">
+                  Photography Package
+                </label>
+                {loadingData && (
+                  <span className="text-[10px] text-[#8993A4]">Loading packages...</span>
+                )}
+              </div>
               <select
                 value={selectedPackageId}
                 onChange={(e) => handlePackageSelect(e.target.value)}
@@ -745,7 +778,7 @@ export function BookingModal({
                 <option value="">Custom Package / Quote</option>
                 {packages.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({formatNPR(p.price)})
+                    {p.name} — {p.category} ({formatNPR(p.price)})
                   </option>
                 ))}
               </select>
