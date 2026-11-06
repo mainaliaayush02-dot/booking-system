@@ -756,11 +756,11 @@ export function BookingModal({
           </div>
 
           {/* Sticky Footer Actions */}
-          <div className="pt-4 border-t border-[#EBD8E1] flex items-center justify-end gap-3 sticky bottom-0 bg-[#FFFAFC] py-3.5 -mb-6 -mx-6 px-6 mt-6 shadow-card">
+          <div className="pt-4 border-t border-[#E8EBF0] flex items-center justify-end gap-3 sticky bottom-0 bg-white py-3.5 -mb-6 -mx-6 px-6 mt-6 shadow-card">
             <Button type="button" variant="outline" onClick={onClose} disabled={submitting} className="cursor-pointer">
               Cancel
             </Button>
-            <Button type="submit" variant="primary" isLoading={submitting} className="cursor-pointer shadow-subtle">
+            <Button type="submit" variant="action" isLoading={submitting} className="cursor-pointer shadow-subtle">
               {editingBooking ? "Save Changes" : "Confirm & Schedule Booking"}
             </Button>
           </div>

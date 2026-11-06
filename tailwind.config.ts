@@ -9,16 +9,26 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Official Brand Color System - Newborn Photography Nepal
+        // Official Brand Color System - Newborn Photography Nepal (Clarity reference palette)
         brand: {
           primary: "#3D084B", // Deep Plum
+          action: "#D9272E", // Primary Red Action
           muted: "#68456E", // Muted Plum
-          bg: "#F5E5EB", // Blush Pink main background
+          bg: "#F8FAFC", // Clean Very Light Grey background
+          blush: "#FCEEEF", // Soft Blush Pink
           secondaryBg: "#EAD1DC", // Dusty Rose
-          card: "#FFFAFC", // Soft White card
-          border: "#EBD8E1", // Soft Pink Border
-          text: "#332A34", // Charcoal typography
-          mutedText: "#846F7F", // Muted Rose Grey
+          card: "#FFFFFF", // Pure White card
+          border: "#E8EBF0", // Soft Minimal Border
+          text: "#252B38", // Deep Charcoal typography
+          mutedText: "#8993A4", // Muted Grey
+        },
+        action: {
+          50: "#FEF2F2",
+          100: "#FCEEEF",
+          200: "#F8D4D6",
+          500: "#D9272E", // Primary Red Action
+          600: "#C21F25",
+          700: "#A8171C",
         },
         plum: {
           50: "#FAF2F7",

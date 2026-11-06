@@ -165,5 +165,19 @@ service cloud.firestore {
       allow create: if isStudioMember();
       allow update, delete: if false; // Strict: Append-only audit trail
     }
+
+    // Studio leads collection
+    match /leads/{leadId} {
+      allow read: if isStudioMember();
+      allow create, update: if isStaffOrAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Studio follow-ups collection
+    match /follow_ups/{followUpId} {
+      allow read: if isStudioMember();
+      allow create, update: if isStaffOrAdmin();
+      allow delete: if isAdmin();
+    }
   }
 }

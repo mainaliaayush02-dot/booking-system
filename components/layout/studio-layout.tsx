@@ -15,8 +15,8 @@ export function StudioLayout({ children, requiredRole }: StudioLayoutProps) {
 
   return (
     <ProtectedRoute requiredRole={requiredRole}>
-      <div className="min-h-screen flex bg-[#FAF5F7] overflow-x-hidden text-[#332A34]">
-        {/* Sidebar - fixed 250px on desktop */}
+      <div className="min-h-screen flex bg-[#F8FAFC] overflow-x-hidden text-[#252B38]">
+        {/* Sidebar - fixed 250px on desktop, drawer on mobile */}
         <Sidebar
           mobileOpen={mobileOpen}
           onCloseMobile={() => setMobileOpen(false)}

@@ -44,7 +44,7 @@ function CalendarContent() {
   const searchParams = useSearchParams();
 
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,6 +52,7 @@ function CalendarContent() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [showFilters, setShowFilters] = useState(false);
 
   // Modals
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -84,7 +85,9 @@ function CalendarContent() {
       if (d) {
         setSelectedSlotDate(d);
         try {
-          setCurrentDate(parseISO(d));
+          const parsed = parseISO(d);
+          setCurrentDate(parsed);
+          setSelectedDate(parsed);
         } catch {}
       }
       setIsBookingModalOpen(true);
@@ -93,31 +96,24 @@ function CalendarContent() {
 
   // Navigation handlers
   const handlePrevious = () => {
-    if (viewMode === "month") setCurrentDate(subMonths(currentDate, 1));
-    else if (viewMode === "week") setCurrentDate(subWeeks(currentDate, 1));
-    else setCurrentDate(subDays(currentDate, 1));
+    setCurrentDate(subMonths(currentDate, 1));
   };
 
   const handleNext = () => {
-    if (viewMode === "month") setCurrentDate(addMonths(currentDate, 1));
-    else if (viewMode === "week") setCurrentDate(addWeeks(currentDate, 1));
-    else setCurrentDate(addDays(currentDate, 1));
+    setCurrentDate(addMonths(currentDate, 1));
   };
 
   const handleToday = () => {
     const todayStr = getTodayNepal();
     try {
-      setCurrentDate(parseISO(todayStr));
+      const today = parseISO(todayStr);
+      setCurrentDate(today);
+      setSelectedDate(today);
     } catch {
-      setCurrentDate(new Date());
+      const today = new Date();
+      setCurrentDate(today);
+      setSelectedDate(today);
     }
-  };
-
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.value) return;
-    try {
-      setCurrentDate(parseISO(e.target.value));
-    } catch {}
   };
 
   // Filter bookings
@@ -138,228 +134,352 @@ function CalendarContent() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const getHeaderTitle = () => {
-    if (viewMode === "month") return format(currentDate, "MMMM yyyy");
-    if (viewMode === "week") {
-      return `Week of ${format(currentDate, "dd MMMM yyyy")}`;
-    }
-    return format(currentDate, "EEEE, dd MMMM yyyy");
+  // Selected date bookings
+  const selectedDayFormatted = format(selectedDate, "yyyy-MM-dd");
+  const selectedDayBookings = filteredBookings.filter(
+    (b) => b.appointmentDate === selectedDayFormatted && b.status !== "cancelled"
+  );
+
+  // Group into standard time slots (Clarity layout: Morning, Afternoon, Evening)
+  const morningBookings = selectedDayBookings.filter(
+    (b) => b.startTime < "12:30"
+  );
+  const afternoonBookings = selectedDayBookings.filter(
+    (b) => b.startTime >= "12:30" && b.startTime < "15:30"
+  );
+  const eveningBookings = selectedDayBookings.filter(
+    (b) => b.startTime >= "15:30" && b.startTime <= "21:00"
+  );
+  const otherBookings = selectedDayBookings.filter(
+    (b) => !morningBookings.includes(b) && !afternoonBookings.includes(b) && !eveningBookings.includes(b)
+  );
+
+  const handleSlotAdd = (time: string) => {
+    setSelectedSlotDate(selectedDayFormatted);
+    setSelectedSlotTime(time);
+    setEditingBooking(null);
+    setIsBookingModalOpen(true);
   };
 
   return (
     <StudioLayout>
-      <div className="space-y-6 pb-12">
-        {/* Top Header Card */}
-        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-5 sm:p-7 rounded-3xl shadow-subtle flex flex-col md:flex-row md:items-center justify-between gap-5">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="w-5 h-5 text-[#3D084B] shrink-0" />
-              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#3D084B] tracking-tight">
-                Studio Booking Calendar
-              </h2>
-            </div>
-            <p className="text-xs sm:text-sm text-[#846F7F] mt-1 font-normal leading-relaxed">
-              Operating in Asia/Kathmandu (NPT) • Appointment conflict detection & session scheduling.
-            </p>
-          </div>
-
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => {
-              setEditingBooking(null);
-              setSelectedSlotDate(undefined);
-              setSelectedSlotTime(undefined);
-              setSelectedClientId(undefined);
-              setIsBookingModalOpen(true);
-            }}
-            className="gap-2 shadow-subtle shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Photography Booking</span>
-          </Button>
-        </div>
-
-        {/* Calendar Controls & Navigation Bar */}
-        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-4 sm:p-5 rounded-3xl shadow-subtle space-y-4">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-            {/* Left: Prev / Next / Title / Today */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto justify-between lg:justify-start">
-              <div className="flex items-center gap-1 bg-[#FAF2F7] border border-[#EBD8E1] p-1 rounded-2xl shrink-0">
-                <button
-                  onClick={handlePrevious}
-                  className="p-1.5 rounded-xl text-[#3D084B] hover:bg-white transition-colors cursor-pointer"
-                  aria-label="Previous"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="p-1.5 rounded-xl text-[#3D084B] hover:bg-white transition-colors cursor-pointer"
-                  aria-label="Next"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              <h3 className="font-serif text-lg sm:text-xl font-bold text-[#3D084B] min-w-[170px]">
-                {getHeaderTitle()}
-              </h3>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleToday}
-                  className="px-3.5 py-1.5 rounded-xl bg-[#FAF2F7] hover:bg-[#F5E5EB] text-[#3D084B] border border-[#EBD8E1] text-xs font-bold transition-all shadow-subtle cursor-pointer"
-                >
-                  Today
-                </button>
-
-                <input
-                  type="date"
-                  value={format(currentDate, "yyyy-MM-dd")}
-                  onChange={handleDateChange}
-                  className="px-2.5 py-1.5 bg-[#FAF2F7]/60 border border-[#EBD8E1] rounded-xl text-xs text-[#332A34] focus:outline-none focus:ring-1 focus:ring-[#3D084B]"
-                />
-              </div>
-            </div>
-
-            {/* Right: View Mode Switcher Pills */}
-            <div className="flex items-center p-1 bg-[#FAF2F7] border border-[#EBD8E1] rounded-2xl w-full sm:w-auto justify-center">
-              <button
-                onClick={() => setViewMode("month")}
-                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === "month"
-                    ? "bg-[#3D084B] text-white shadow-subtle"
-                    : "text-[#846F7F] hover:text-[#3D084B]"
-                }`}
-              >
-                Month View
-              </button>
-              <button
-                onClick={() => setViewMode("week")}
-                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === "week"
-                    ? "bg-[#3D084B] text-white shadow-subtle"
-                    : "text-[#846F7F] hover:text-[#3D084B]"
-                }`}
-              >
-                Week View
-              </button>
-              <button
-                onClick={() => setViewMode("day")}
-                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === "day"
-                    ? "bg-[#3D084B] text-white shadow-subtle"
-                    : "text-[#846F7F] hover:text-[#3D084B]"
-                }`}
-              >
-                Day View
-              </button>
+      <div className="space-y-6 pb-16 max-w-4xl mx-auto">
+        {/* Top Control Bar: Search & Quick Filters Toggle (Desktop) */}
+        <div className="hidden sm:flex items-center justify-between gap-3 bg-white border border-[#E8EBF0] p-3 sm:p-4 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <button
+              onClick={handleToday}
+              className="px-3.5 py-1.5 rounded-xl bg-[#F8FAFC] hover:bg-[#FCEEEF] hover:text-[#D9272E] text-[#252B38] border border-[#E8EBF0] text-xs font-bold transition-all shadow-subtle cursor-pointer"
+            >
+              Today
+            </button>
+            <div className="text-xs text-[#8993A4] font-medium hidden sm:block">
+              {format(selectedDate, "MMMM d, yyyy")}
             </div>
           </div>
 
-          {/* Search & Category / Status Filters Bar */}
-          <div className="pt-3 border-t border-[#EBD8E1] flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
-            {/* Search */}
-            <div className="flex items-center gap-2.5 bg-[#FAF2F7]/60 border border-[#EBD8E1] px-3.5 py-2 rounded-2xl w-full md:w-80">
-              <Search className="w-3.5 h-3.5 text-[#846F7F] shrink-0" />
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            {/* Search Input */}
+            <div className="flex items-center gap-2 bg-[#F8FAFC] border border-[#E8EBF0] px-3 py-1.5 rounded-xl w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 text-[#8993A4] shrink-0" />
               <input
                 type="text"
-                placeholder="Search by client, ID, baby, or package..."
+                placeholder="Search bookings..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-transparent text-xs text-[#332A34] placeholder-[#846F7F]/60 focus:outline-none"
+                className="w-full bg-transparent text-xs text-[#252B38] placeholder-[#8993A4] focus:outline-none"
               />
             </div>
 
-            {/* Dropdown Filters */}
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto">
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 bg-[#FAF2F7]/60 border border-[#EBD8E1] rounded-2xl text-xs text-[#332A34] font-medium focus:outline-none focus:ring-1 focus:ring-[#3D084B]"
-              >
-                <option value="All">All Photography Categories</option>
-                <option value="Newborn Photography">Newborn Photography</option>
-                <option value="Maternity Photography">Maternity Photography</option>
-                <option value="Baby Photography">Baby Photography</option>
-                <option value="Cake Smash Photography">Cake Smash Photography</option>
-                <option value="Family Photography">Family Photography</option>
-                <option value="Couple Photography">Couple Photography</option>
-              </select>
-
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 bg-[#FAF2F7]/60 border border-[#EBD8E1] rounded-2xl text-xs text-[#332A34] font-medium focus:outline-none focus:ring-1 focus:ring-[#3D084B]"
-              >
-                <option value="All">All Booking Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="completed">Completed</option>
-                <option value="rescheduled">Rescheduled</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-
-              <span className="text-[11px] text-[#846F7F] font-semibold hidden lg:inline-block shrink-0">
-                {filteredBookings.length} Bookings
-              </span>
-            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`p-2 rounded-xl border border-[#E8EBF0] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                showFilters ? "bg-[#FCEEEF] text-[#D9272E]" : "bg-white text-[#252B38] hover:bg-[#F8FAFC]"
+              }`}
+              title="Filters"
+            >
+              <Filter className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 
-        {/* Calendar View Container */}
-        {loading ? (
-          <Card className="p-16 text-center">
-            <p className="text-xs text-[#846F7F] animate-pulse font-medium">
-              Loading calendar appointments...
-            </p>
-          </Card>
-        ) : (
-          <div>
-            {viewMode === "month" && (
-              <MonthView
-                currentDate={currentDate}
-                bookings={filteredBookings}
-                onSelectBooking={(b) => setViewingBooking(b)}
-                onSelectDate={(dStr) => {
-                  try {
-                    setCurrentDate(parseISO(dStr));
-                    setViewMode("day");
-                  } catch {}
-                }}
-              />
-            )}
+        {/* Expandable Filter Bar */}
+        {showFilters && (
+          <div className="bg-white border border-[#E8EBF0] p-3 sm:p-4 rounded-2xl shadow-sm flex flex-wrap items-center gap-3 animate-in fade-in duration-200">
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-3 py-1.5 bg-[#F8FAFC] border border-[#E8EBF0] rounded-xl text-xs text-[#252B38] font-medium focus:outline-none"
+            >
+              <option value="All">All Categories</option>
+              <option value="Newborn Photography">Newborn Photography</option>
+              <option value="Maternity Photography">Maternity Photography</option>
+              <option value="Baby Photography">Baby Photography</option>
+              <option value="Cake Smash Photography">Cake Smash Photography</option>
+              <option value="Family Photography">Family Photography</option>
+              <option value="Couple Photography">Couple Photography</option>
+            </select>
 
-            {viewMode === "week" && (
-              <WeekView
-                currentDate={currentDate}
-                bookings={filteredBookings}
-                onSelectBooking={(b) => setViewingBooking(b)}
-                onSelectSlot={(dStr, tStr) => {
-                  setSelectedSlotDate(dStr);
-                  setSelectedSlotTime(tStr);
-                  setEditingBooking(null);
-                  setIsBookingModalOpen(true);
-                }}
-              />
-            )}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-1.5 bg-[#F8FAFC] border border-[#E8EBF0] rounded-xl text-xs text-[#252B38] font-medium focus:outline-none"
+            >
+              <option value="All">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="completed">Completed</option>
+              <option value="rescheduled">Rescheduled</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
 
-            {viewMode === "day" && (
-              <DayView
-                currentDate={currentDate}
-                bookings={filteredBookings}
-                onSelectBooking={(b) => setViewingBooking(b)}
-                onSelectSlot={(dStr, tStr) => {
-                  setSelectedSlotDate(dStr);
-                  setSelectedSlotTime(tStr);
-                  setEditingBooking(null);
-                  setIsBookingModalOpen(true);
+            {(categoryFilter !== "All" || statusFilter !== "All" || search) && (
+              <button
+                onClick={() => {
+                  setCategoryFilter("All");
+                  setStatusFilter("All");
+                  setSearch("");
                 }}
-              />
+                className="text-xs text-[#D9272E] hover:underline font-semibold"
+              >
+                Clear Filters
+              </button>
             )}
           </div>
         )}
+
+        {/* 1. Month View Calendar Card (Recreating Screenshot 1 & 2) */}
+        {loading ? (
+          <Card className="p-16 text-center">
+            <p className="text-xs text-[#8993A4] animate-pulse font-medium">
+              Loading calendar sessions...
+            </p>
+          </Card>
+        ) : (
+          <MonthView
+            currentDate={currentDate}
+            selectedDate={selectedDate}
+            bookings={filteredBookings}
+            onSelectBooking={(b) => setViewingBooking(b)}
+            onSelectDate={(dStr) => {
+              try {
+                setSelectedDate(parseISO(dStr));
+              } catch {}
+            }}
+            onPrevMonth={handlePrevious}
+            onNextMonth={handleNext}
+          />
+        )}
+
+        {/* 2. Selected Date Header & Floating Red + Action Button */}
+        <div className="flex items-center justify-between pt-2 px-1">
+          <div>
+            <h2 className="font-sans text-2xl sm:text-3xl font-bold text-[#252B38] tracking-tight">
+              {format(selectedDate, "d EEEE")}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#8993A4] mt-0.5">
+              {selectedDayBookings.length} Scheduled
+            </p>
+          </div>
+
+          {/* Red Floating Action Button */}
+          <button
+            onClick={() => {
+              setSelectedSlotDate(selectedDayFormatted);
+              setSelectedSlotTime(undefined);
+              setEditingBooking(null);
+              setIsBookingModalOpen(true);
+            }}
+            className="w-12 h-12 rounded-full bg-[#D9272E] hover:bg-[#C21F25] active:scale-95 text-white flex items-center justify-center shadow-[0_4px_14px_rgba(217,39,46,0.4)] transition-all cursor-pointer shrink-0"
+            title="Schedule session for this date"
+            aria-label="Add session"
+          >
+            <Plus className="w-6 h-6 stroke-[2.5]" />
+          </button>
+        </div>
+
+        {/* 3. Three Spacious Dashed-Outline Session Cards (Screenshot 1 & 2) */}
+        <div className="space-y-4">
+          {/* Slot 1: Morning Session (10:00 - 12:00) */}
+          {morningBookings.length === 0 ? (
+            <div className="border-2 border-dashed border-[#E8EBF0] hover:border-[#D9272E]/40 rounded-2xl p-4 sm:p-5 bg-white flex items-center justify-between transition-all">
+              <div>
+                <h4 className="font-sans text-sm sm:text-base font-bold text-[#252B38]">
+                  Morning Session
+                </h4>
+                <p className="text-xs text-[#8993A4] mt-0.5">10:00 – 12:00</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleSlotAdd("10:00")}
+                className="w-8 h-8 rounded-full border border-[#E8EBF0] hover:border-[#D9272E] text-[#8993A4] hover:text-[#D9272E] hover:bg-[#FCEEEF] flex items-center justify-center transition-colors cursor-pointer"
+                title="Book Morning Session"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            morningBookings.map((b) => (
+              <div
+                key={b.id}
+                onClick={() => setViewingBooking(b)}
+                className="border border-[#E8EBF0] hover:border-[#D9272E] rounded-2xl p-4 sm:p-5 bg-white shadow-sm flex items-center justify-between transition-all cursor-pointer group"
+              >
+                <div className="min-w-0 pr-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#D9272E] bg-[#FCEEEF] px-2 py-0.5 rounded-md">
+                      Morning • {b.startTime} - {b.endTime}
+                    </span>
+                    <span className="text-xs text-[#8993A4] font-mono">#{b.bookingNumber}</span>
+                  </div>
+                  <h4 className="font-sans text-base font-bold text-[#252B38] mt-1.5 truncate group-hover:text-[#D9272E] transition-colors">
+                    {b.clientName} {b.babyName ? `(${b.babyName})` : ""}
+                  </h4>
+                  <p className="text-xs text-[#3D084B] font-medium mt-0.5 truncate">
+                    {b.packageName}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-lg capitalize ${
+                    b.status === "confirmed" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"
+                  }`}>
+                    {b.status}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Slot 2: Afternoon Session (13:00 - 15:00) */}
+          {afternoonBookings.length === 0 ? (
+            <div className="border-2 border-dashed border-[#E8EBF0] hover:border-[#D9272E]/40 rounded-2xl p-4 sm:p-5 bg-white flex items-center justify-between transition-all">
+              <div>
+                <h4 className="font-sans text-sm sm:text-base font-bold text-[#252B38]">
+                  Afternoon Session
+                </h4>
+                <p className="text-xs text-[#8993A4] mt-0.5">13:00 – 15:00</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleSlotAdd("13:00")}
+                className="w-8 h-8 rounded-full border border-[#E8EBF0] hover:border-[#D9272E] text-[#8993A4] hover:text-[#D9272E] hover:bg-[#FCEEEF] flex items-center justify-center transition-colors cursor-pointer"
+                title="Book Afternoon Session"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            afternoonBookings.map((b) => (
+              <div
+                key={b.id}
+                onClick={() => setViewingBooking(b)}
+                className="border border-[#E8EBF0] hover:border-[#D9272E] rounded-2xl p-4 sm:p-5 bg-white shadow-sm flex items-center justify-between transition-all cursor-pointer group"
+              >
+                <div className="min-w-0 pr-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#D9272E] bg-[#FCEEEF] px-2 py-0.5 rounded-md">
+                      Afternoon • {b.startTime} - {b.endTime}
+                    </span>
+                    <span className="text-xs text-[#8993A4] font-mono">#{b.bookingNumber}</span>
+                  </div>
+                  <h4 className="font-sans text-base font-bold text-[#252B38] mt-1.5 truncate group-hover:text-[#D9272E] transition-colors">
+                    {b.clientName} {b.babyName ? `(${b.babyName})` : ""}
+                  </h4>
+                  <p className="text-xs text-[#3D084B] font-medium mt-0.5 truncate">
+                    {b.packageName}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-lg capitalize ${
+                    b.status === "confirmed" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"
+                  }`}>
+                    {b.status}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Slot 3: Evening Session (16:00 - 18:00) */}
+          {eveningBookings.length === 0 ? (
+            <div className="border-2 border-dashed border-[#E8EBF0] hover:border-[#D9272E]/40 rounded-2xl p-4 sm:p-5 bg-white flex items-center justify-between transition-all">
+              <div>
+                <h4 className="font-sans text-sm sm:text-base font-bold text-[#252B38]">
+                  Evening Session
+                </h4>
+                <p className="text-xs text-[#8993A4] mt-0.5">16:00 – 18:00</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleSlotAdd("16:00")}
+                className="w-8 h-8 rounded-full border border-[#E8EBF0] hover:border-[#D9272E] text-[#8993A4] hover:text-[#D9272E] hover:bg-[#FCEEEF] flex items-center justify-center transition-colors cursor-pointer"
+                title="Book Evening Session"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            eveningBookings.map((b) => (
+              <div
+                key={b.id}
+                onClick={() => setViewingBooking(b)}
+                className="border border-[#E8EBF0] hover:border-[#D9272E] rounded-2xl p-4 sm:p-5 bg-white shadow-sm flex items-center justify-between transition-all cursor-pointer group"
+              >
+                <div className="min-w-0 pr-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#D9272E] bg-[#FCEEEF] px-2 py-0.5 rounded-md">
+                      Evening • {b.startTime} - {b.endTime}
+                    </span>
+                    <span className="text-xs text-[#8993A4] font-mono">#{b.bookingNumber}</span>
+                  </div>
+                  <h4 className="font-sans text-base font-bold text-[#252B38] mt-1.5 truncate group-hover:text-[#D9272E] transition-colors">
+                    {b.clientName} {b.babyName ? `(${b.babyName})` : ""}
+                  </h4>
+                  <p className="text-xs text-[#3D084B] font-medium mt-0.5 truncate">
+                    {b.packageName}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-lg capitalize ${
+                    b.status === "confirmed" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"
+                  }`}>
+                    {b.status}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Any other custom sessions on this date */}
+          {otherBookings.length > 0 && (
+            <div className="pt-2 space-y-3">
+              <h5 className="text-xs font-bold uppercase tracking-wider text-[#8993A4]">
+                Additional Scheduled Sessions
+              </h5>
+              {otherBookings.map((b) => (
+                <div
+                  key={b.id}
+                  onClick={() => setViewingBooking(b)}
+                  className="border border-[#E8EBF0] hover:border-[#D9272E] rounded-2xl p-4 bg-white shadow-sm flex items-center justify-between transition-all cursor-pointer group"
+                >
+                  <div className="min-w-0 pr-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#3D084B] bg-[#F8FAFC] border border-[#E8EBF0] px-2 py-0.5 rounded-md">
+                        {b.startTime} - {b.endTime}
+                      </span>
+                      <span className="text-xs text-[#8993A4] font-mono">#{b.bookingNumber}</span>
+                    </div>
+                    <h4 className="font-sans text-sm font-bold text-[#252B38] mt-1 truncate group-hover:text-[#D9272E]">
+                      {b.clientName}
+                    </h4>
+                    <p className="text-xs text-[#8993A4] mt-0.5 truncate">{b.packageName}</p>
+                  </div>
+                  <span className="text-xs text-[#D9272E] font-semibold">View</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Create / Edit Booking Modal */}
         <BookingModal

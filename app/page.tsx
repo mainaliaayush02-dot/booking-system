@@ -124,22 +124,21 @@ export default function DashboardPage() {
 
   return (
     <StudioLayout>
-      <div className="space-y-6 sm:space-y-8 pb-12">
+      <div className="space-y-6 pb-16 max-w-7xl mx-auto">
         {/* Studio Operations Header Banner */}
-        <div className="bg-[#FFFAFC] border border-[#EBD8E1] p-6 sm:p-8 rounded-3xl shadow-studio flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-[#F5E5EB]/40 to-transparent rounded-full -mr-20 -mt-20 pointer-events-none" />
+        <div className="bg-white border border-[#E8EBF0] p-6 sm:p-7 rounded-3xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
           <div className="min-w-0 relative z-10">
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#68456E]">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#8993A4]">
                 Studio Live Overview
               </span>
             </div>
-            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-[#3D084B] tracking-tight">
+            <h2 className="font-sans text-2xl sm:text-3xl font-bold text-[#252B38] tracking-tight">
               {greeting}, {firstName}
             </h2>
-            <p className="text-xs sm:text-sm text-[#846F7F] mt-1.5 font-normal leading-relaxed max-w-xl">
-              Here is your daily snapshot of newborn photography bookings, client visits, and studio financial performance.
+            <p className="text-xs sm:text-sm text-[#8993A4] mt-1 font-normal leading-relaxed max-w-xl">
+              Daily snapshot of newborn photography sessions, bookings, and studio finances.
             </p>
           </div>
 
@@ -150,7 +149,7 @@ export default function DashboardPage() {
                 setEditingBooking(null);
                 setIsBookingModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#3D084B] hover:bg-[#521363] text-white text-xs font-semibold tracking-wide shadow-subtle hover:shadow transition-all cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#3D084B]/30"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#D9272E] hover:bg-[#C21F25] text-white text-xs font-semibold tracking-wide shadow-subtle hover:shadow transition-all cursor-pointer active:scale-[0.98]"
             >
               <PlusCircle className="w-4 h-4" />
               <span>New Booking</span>
@@ -160,17 +159,17 @@ export default function DashboardPage() {
                 setEditingClient(null);
                 setIsClientModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF2F7] hover:bg-[#F3E2EE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#3D084B]/30"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white hover:bg-[#F8FAFC] text-[#252B38] border border-[#E8EBF0] text-xs font-semibold transition-all shadow-subtle cursor-pointer active:scale-[0.98]"
             >
-              <Users className="w-4 h-4 text-[#3D084B]" />
+              <Users className="w-4 h-4 text-[#8993A4]" />
               <span>Add Client</span>
             </button>
             {!isPhotographer && (
               <Link
                 href="/finance"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF2F7] hover:bg-[#F3E2EE] text-[#3D084B] border border-[#EBD8E1] text-xs font-semibold transition-all shadow-subtle active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[#3D084B]/30"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white hover:bg-[#F8FAFC] text-[#252B38] border border-[#E8EBF0] text-xs font-semibold transition-all shadow-subtle active:scale-[0.98]"
               >
-                <Receipt className="w-4 h-4 text-[#3D084B]" />
+                <Receipt className="w-4 h-4 text-[#8993A4]" />
                 <span>Record Payment</span>
               </Link>
             )}

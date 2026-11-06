@@ -19,6 +19,7 @@ import {
   Client,
   PhotographyPackage,
   Booking,
+  BookingStatus,
   Payment,
   StudioExpense,
   ActivityLog,
@@ -28,6 +29,8 @@ import {
   PaymentType,
   ExpenseCategory,
   StudioUser,
+  Lead,
+  FollowUp,
 } from "./types";
 import { getTodayNepal } from "./utils";
 import {
@@ -1350,4 +1353,239 @@ export async function getMonthlyRevenueTrend(): Promise<MonthlyTrendData[]> {
       expenses,
     };
   });
+}
+
+// ----------------------------------------------------------------------
+// SESSIONS DELIVERY TRACKING
+// ----------------------------------------------------------------------
+export async function toggleBookingDelivered(
+  bookingId: string,
+  delivered: boolean,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  const ref = doc(db, "bookings", bookingId);
+  const now = new Date().toISOString();
+  await updateDoc(ref, {
+    delivered,
+    deliveredAt: delivered ? now : null,
+    updatedAt: now,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    delivered ? "MARKED_SESSION_DELIVERED" : "MARKED_SESSION_UNDELIVERED",
+    "booking",
+    bookingId,
+    `Marked session ${bookingId} as ${delivered ? "delivered" : "pending delivery"}`
+  );
+}
+
+// ----------------------------------------------------------------------
+// LEADS MANAGEMENT
+// ----------------------------------------------------------------------
+export async function getLeads(): Promise<Lead[]> {
+  try {
+    const q = query(collection(db, "leads"), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Lead, "id">) }));
+  } catch (err) {
+    console.warn("Could not query leads collection, falling back:", err);
+    return [];
+  }
+}
+
+export async function createLead(
+  leadData: Omit<Lead, "id" | "createdAt" | "updatedAt">,
+  user: { uid: string; displayName: string }
+): Promise<Lead> {
+  const now = new Date().toISOString();
+  const docRef = await addDoc(collection(db, "leads"), {
+    ...leadData,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "CREATED_LEAD",
+    "client",
+    docRef.id,
+    `Added new photography lead: ${leadData.clientName} (${leadData.category})`
+  );
+
+  return { id: docRef.id, ...leadData, createdAt: now, updatedAt: now };
+}
+
+export async function updateLead(
+  leadId: string,
+  updates: Partial<Lead>,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  const now = new Date().toISOString();
+  await updateDoc(doc(db, "leads", leadId), {
+    ...updates,
+    updatedAt: now,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "UPDATED_LEAD",
+    "client",
+    leadId,
+    `Updated lead status/details for ${leadId}`
+  );
+}
+
+export async function deleteLead(
+  leadId: string,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  await deleteDoc(doc(db, "leads", leadId));
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "DELETED_LEAD",
+    "client",
+    leadId,
+    `Deleted inquiry lead ${leadId}`
+  );
+}
+
+// ----------------------------------------------------------------------
+// FOLLOW-UPS MANAGEMENT
+// ----------------------------------------------------------------------
+export async function getFollowUps(): Promise<FollowUp[]> {
+  try {
+    const q = query(collection(db, "follow_ups"), orderBy("dueDate", "asc"));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<FollowUp, "id">) }));
+  } catch (err) {
+    console.warn("Could not query follow_ups collection:", err);
+    return [];
+  }
+}
+
+export async function createFollowUp(
+  data: Omit<FollowUp, "id" | "createdAt" | "updatedAt">,
+  user: { uid: string; displayName: string }
+): Promise<FollowUp> {
+  const now = new Date().toISOString();
+  const docRef = await addDoc(collection(db, "follow_ups"), {
+    ...data,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "CREATED_FOLLOWUP",
+    "booking",
+    docRef.id,
+    `Created follow-up: "${data.title}" for ${data.clientName}`
+  );
+
+  return { id: docRef.id, ...data, createdAt: now, updatedAt: now };
+}
+
+export async function toggleFollowUpComplete(
+  followUpId: string,
+  completed: boolean,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  const now = new Date().toISOString();
+  await updateDoc(doc(db, "follow_ups", followUpId), {
+    completed,
+    updatedAt: now,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    completed ? "COMPLETED_FOLLOWUP" : "REOPENED_FOLLOWUP",
+    "booking",
+    followUpId,
+    `Follow-up ${completed ? "completed" : "reopened"}`
+  );
+}
+
+// ----------------------------------------------------------------------
+// TRASH & ARCHIVE MANAGEMENT
+// ----------------------------------------------------------------------
+export async function getArchivedItems(): Promise<{
+  archivedPackages: PhotographyPackage[];
+  cancelledBookings: Booking[];
+}> {
+  try {
+    // Packages that have isDeleted == true
+    const pkgSnap = await getDocs(collection(db, "packages"));
+    const archivedPackages = pkgSnap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<PhotographyPackage, "id">) }))
+      .filter((pkg) => pkg.isDeleted === true);
+
+    // Bookings that are cancelled
+    const bookingsSnap = await getDocs(
+      query(collection(db, "bookings"), where("status", "==", "cancelled"))
+    );
+    const cancelledBookings = bookingsSnap.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as Omit<Booking, "id">),
+    }));
+
+    return { archivedPackages, cancelledBookings };
+  } catch (err) {
+    console.error("Error fetching archived items:", err);
+    return { archivedPackages: [], cancelledBookings: [] };
+  }
+}
+
+export async function restorePackage(
+  packageId: string,
+  user: { uid: string; displayName: string; role?: string }
+): Promise<void> {
+  if (user.role !== "admin") {
+    throw new Error("Unauthorized: Only studio administrators can restore packages.");
+  }
+  const now = new Date().toISOString();
+  await updateDoc(doc(db, "packages", packageId), {
+    isDeleted: false,
+    active: true,
+    deletedAt: null,
+    deletedByUid: null,
+    deletedByName: null,
+    updatedAt: now,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "RESTORED_PACKAGE",
+    "package",
+    packageId,
+    `Restored photography package ${packageId} to active catalog`
+  );
+}
+
+export async function restoreBooking(
+  bookingId: string,
+  newStatus: BookingStatus,
+  user: { uid: string; displayName: string }
+): Promise<void> {
+  const now = new Date().toISOString();
+  await updateDoc(doc(db, "bookings", bookingId), {
+    status: newStatus,
+    updatedAt: now,
+  });
+
+  await logActivity(
+    user.uid,
+    user.displayName,
+    "RESTORED_BOOKING",
+    "booking",
+    bookingId,
+    `Restored cancelled booking ${bookingId} to ${newStatus}`
+  );
 }

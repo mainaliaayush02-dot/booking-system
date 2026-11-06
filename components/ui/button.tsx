@@ -2,7 +2,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger" | "subtle";
+  variant?: "primary" | "action" | "secondary" | "outline" | "ghost" | "danger" | "subtle";
   size?: "sm" | "md" | "lg";
   isLoading?: boolean;
 }
@@ -17,18 +17,20 @@ export function Button({
   ...props
 }: ButtonProps) {
   const variantStyles = {
+    action:
+      "bg-[#D9272E] hover:bg-[#C21F25] active:bg-[#A8171C] text-white shadow-[0_2px_8px_rgba(217,39,46,0.25)] hover:shadow-[0_4px_12px_rgba(217,39,46,0.35)] border border-transparent font-semibold tracking-wide",
     primary:
       "bg-[#3D084B] hover:bg-[#32063E] active:bg-[#260430] text-white shadow-subtle hover:shadow-card border border-transparent font-semibold tracking-wide",
     secondary:
-      "bg-[#FAF2F7] hover:bg-[#F3E2EE] active:bg-[#EBD8E1] text-[#3D084B] border border-[#EBD8E1] font-semibold hover:border-[#D6A3C7]",
+      "bg-[#FCEEEF] hover:bg-[#F8D4D6] active:bg-[#F0C2C5] text-[#D9272E] border border-[#F8D4D6] font-semibold",
     outline:
-      "bg-white hover:bg-[#FAF2F7] text-[#3D084B] border border-[#EBD8E1] hover:border-[#3D084B] font-semibold shadow-subtle",
+      "bg-white hover:bg-[#F8FAFC] text-[#252B38] border border-[#E8EBF0] hover:border-[#8993A4] font-semibold shadow-subtle",
     ghost:
-      "bg-transparent hover:bg-[#FAF2F7] text-[#332A34] hover:text-[#3D084B] border border-transparent font-medium",
+      "bg-transparent hover:bg-[#F8FAFC] text-[#252B38] hover:text-[#D9272E] border border-transparent font-medium",
     danger:
       "bg-rose-700 hover:bg-rose-800 active:bg-rose-900 text-white shadow-subtle border border-transparent font-semibold",
     subtle:
-      "bg-[#F5E5EB]/70 hover:bg-[#F5E5EB] text-[#68456E] hover:text-[#3D084B] border border-[#EBD8E1] font-medium",
+      "bg-[#FCEEEF]/70 hover:bg-[#FCEEEF] text-[#3D084B] hover:text-[#D9272E] border border-[#E8EBF0] font-medium",
   };
 
   const sizeStyles = {

@@ -5,17 +5,18 @@
 @tailwind utilities;
 
 :root {
-  --background: #FAF5F7;
-  --foreground: #2D232F;
+  --background: #F8FAFC;
+  --foreground: #252B38;
   --card: #FFFFFF;
-  --card-subtle: #FFFAFC;
-  --border: #EBD8E1;
-  --border-subtle: #F3E6EE;
-  --primary: #3D084B;
-  --primary-hover: #32063E;
+  --card-subtle: #F8FAFC;
+  --border: #E8EBF0;
+  --border-subtle: #F1F4F9;
+  --primary: #D9272E;
+  --primary-plum: #3D084B;
+  --primary-hover: #C21F25;
   --secondary: #68456E;
-  --muted-text: #7D6677;
-  --accent-blush: #F5E5EB;
+  --muted-text: #8993A4;
+  --accent-blush: #FCEEEF;
 }
 
 body {
@@ -27,36 +28,36 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* Custom subtle scrollbar with soft blush tones */
+/* Custom subtle scrollbar with soft clean tones */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #FAF5F7;
+  background: #F8FAFC;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D8B7C9;
+  background: #E8EBF0;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #68456E;
+  background: #8993A4;
 }
 
 /* Studio card hover transitions */
 .studio-card {
   background-color: #FFFFFF;
-  border: 1px solid #EBD8E1;
-  box-shadow: 0 1px 3px 0 rgba(61, 8, 75, 0.03), 0 1px 2px -1px rgba(61, 8, 75, 0.03);
+  border: 1px solid #E8EBF0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .studio-card:hover {
-  box-shadow: 0 8px 24px -4px rgba(61, 8, 75, 0.07), 0 2px 6px -2px rgba(61, 8, 75, 0.04);
-  border-color: #D6A3C7;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.06);
+  border-color: #D9272E;
 }
 
 /* Accessible focus visible rings */

@@ -116,6 +116,9 @@ export interface Booking {
   endTime: string; // HH:mm (24-hour format)
   durationMinutes: number;
   status: BookingStatus;
+  delivered?: boolean;
+  deliveredAt?: string;
+  deliveryNotes?: string;
   location?: 'studio' | 'home' | 'outdoor';
   photographerName?: string;
   specialInstructions?: string;
@@ -220,4 +223,33 @@ export interface DashboardMetrics {
   monthlyExpenses: number;
   cashProfit: number;
   pendingBalanceTotal: number;
+}
+
+export interface Lead {
+  id: string;
+  clientName: string;
+  phone: string;
+  email?: string;
+  babyDueDate?: string;
+  category: string;
+  packageName?: string;
+  status: 'new' | 'contacted' | 'booked' | 'lost';
+  urgency?: 'high' | 'medium' | 'low';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FollowUp {
+  id: string;
+  title: string;
+  clientName: string;
+  phone: string;
+  bookingId?: string;
+  type: 'gallery_delivery' | 'prep_guide' | 'due_date_checkin' | 'balance_payment' | 'other';
+  dueDate: string;
+  completed: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
